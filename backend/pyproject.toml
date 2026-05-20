@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosco-gd-backend"
+version = "0.1.0"
+description = "Shipping yard cockpit backend powered by FastAPI"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "sqlalchemy>=2.0.32",
+  "asyncpg>=0.29.0",
+  "psycopg[binary]>=3.2.0",
+  "alembic>=1.13.2",
+  "pydantic>=2.8.2",
+  "pydantic-settings>=2.3.4",
+  "redis>=5.0.8",
+  "apscheduler>=3.10.4",
+  "python-jose[cryptography]>=3.3.0",
+  "geoalchemy2>=0.15.2",
+  "python-multipart>=0.0.9",
+]
+
+# 仅打包 `app`，避免把仓库根目录下的 `alembic/`（迁移配置目录）当成 Python 包自动发现
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["alembic*", "scripts*"]
+
+[tool.uvicorn]
+factory = false
+host = "0.0.0.0"
+port = 8000
+reload = true

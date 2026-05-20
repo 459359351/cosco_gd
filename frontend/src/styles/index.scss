@@ -1,0 +1,43 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Inter", "Microsoft YaHei", sans-serif;
+  color: #d9f2ff;
+}
+
+.yard-marker {
+  padding: 3px 8px;
+  border: 1px solid #46ddff;
+  border-radius: 12px;
+  color: #d9f2ff;
+  background: rgba(0, 32, 66, 0.8);
+  box-shadow: 0 0 10px rgba(70, 221, 255, 0.36);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.yard-marker.warning {
+  border-color: #ffb100;
+}
+
+.yard-marker.busy {
+  border-color: #ff5d5d;
+}
+
+/* 省份筛选：下拉挂在 body，抬高 z-index，避免被高德地图 canvas 遮挡 */
+.cockpit-province-popper.el-popper {
+  z-index: 6000 !important;
+}
+
+/* 省份筛选下拉：避免被高德地图 WebGL/canvas 层盖住 */
+.cockpit-province-popper.el-popper {
+  z-index: 6000 !important;
+}

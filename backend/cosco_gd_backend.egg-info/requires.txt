@@ -1,0 +1,11 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sqlalchemy>=2.0.32
+asyncpg>=0.29.0
+alembic>=1.13.2
+pydantic>=2.8.2
+pydantic-settings>=2.3.4
+redis>=5.0.8
+apscheduler>=3.10.4
+python-jose[cryptography]>=3.3.0
+geoalchemy2>=0.15.2
