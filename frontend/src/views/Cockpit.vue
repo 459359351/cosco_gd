@@ -22,17 +22,20 @@
             <el-select
               v-model="selection.province"
               class="province-select"
-              placeholder="筛选省份"
+              :placeholder="provinceOptions.length ? '筛选省份' : '请先在系统管理维护省份'"
               clearable
               teleported
               popper-class="cockpit-province-popper"
             >
-              <el-option label="广东" value="广东" />
-              <el-option label="广西" value="广西" />
+              <el-option
+                v-for="p in provinceOptions"
+                :key="p.code"
+                :label="p.label"
+                :value="p.code"
+              />
             </el-select>
-            <el-button class="console-link" type="primary" link @click="goDataConsole">
-              数据管理
-            </el-button>
+            <el-button class="console-link" type="primary" link @click="goSystemAdmin">系统管理</el-button>
+            <el-button class="console-link" type="primary" link @click="goDataConsole">数据管理</el-button>
           </div>
           <MapCore />
           <YardDrawer />
@@ -68,7 +71,7 @@
 
 <script setup lang="ts">
 import { ElButton, ElOption, ElSelect } from "element-plus";
-import { onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import CargoPieChart from "@/components/charts/CargoPieChart.vue";
@@ -84,21 +87,30 @@ import YardTable from "@/components/tables/YardTable.vue";
 import { useScreenAdapter } from "@/composables/useScreenAdapter";
 import { useWS } from "@/composables/useWS";
 import ScreenLayout from "@/layouts/ScreenLayout.vue";
+import { useDictStore } from "@/store/dict";
 import { useSelectionStore } from "@/store/selection";
 import { useYardStore } from "@/store/yard";
 
 const { scale } = useScreenAdapter();
 const store = useYardStore();
 const selection = useSelectionStore();
+const dict = useDictStore();
 const router = useRouter();
+
+const provinceOptions = computed(() => dict.provinces);
 
 function goDataConsole() {
   void router.push({ name: "DataConsole" });
 }
 
+function goSystemAdmin() {
+  void router.push({ name: "SystemAdmin" });
+}
+
 useWS();
 
 onMounted(() => {
+  void dict.ensure("province");
   store.loadAll();
 });
 

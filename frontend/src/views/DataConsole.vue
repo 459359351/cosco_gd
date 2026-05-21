@@ -6,6 +6,7 @@
         <p class="sub">维护驾驶舱用到的库表：查看明细、单条录入、CSV 批量导入（UTF-8，可用 Excel 另存为 CSV）</p>
       </div>
       <div class="actions">
+        <el-button type="primary" link @click="router.push({ name: 'SystemAdmin' })">系统管理</el-button>
         <el-button type="primary" link @click="router.push('/')">返回驾驶舱</el-button>
       </div>
     </header>
@@ -178,18 +179,66 @@
     </el-tabs>
 
     <!-- 堆场表单 -->
-    <el-dialog v-model="yardDlg" :title="yardEditId ? '编辑堆场' : '新增堆场'" width="520px" destroy-on-close>
+    <el-dialog
+      v-model="yardDlg"
+      class="console-dlg"
+      modal-class="console-dlg-overlay"
+      :title="yardEditId ? '编辑堆场' : '新增堆场'"
+      width="560px"
+      destroy-on-close
+      @opened="onYardDlgOpened"
+    >
       <el-form label-width="100px">
         <el-form-item label="名称"><el-input v-model="yardForm.name" /></el-form-item>
         <el-form-item label="编码"><el-input v-model="yardForm.code" :disabled="!!yardEditId" /></el-form-item>
-        <el-form-item label="类型"><el-input v-model="yardForm.yard_type" placeholder="yard / logistics" /></el-form-item>
-        <el-form-item label="省"><el-input v-model="yardForm.province" /></el-form-item>
-        <el-form-item label="市"><el-input v-model="yardForm.city" /></el-form-item>
-        <el-form-item label="经度"><el-input v-model.number="yardForm.lng" type="number" /></el-form-item>
-        <el-form-item label="纬度"><el-input v-model.number="yardForm.lat" type="number" /></el-form-item>
+        <el-form-item label="详细地址">
+          <div class="addr-row">
+            <el-input v-model="yardAddress" placeholder="如：广州市南沙区港前大道南" clearable />
+            <el-button type="primary" :loading="geocodeLoading" @click="resolveYardAddress">解析坐标</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select
+            v-model="yardForm.yard_type"
+            style="width: 100%"
+            placeholder="选择类型"
+            teleported
+            popper-class="console-select-popper"
+          >
+            <el-option v-for="o in dict.items('yard_type')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="省">
+          <el-select
+            v-model="yardForm.province"
+            style="width: 100%"
+            placeholder="选择省份"
+            teleported
+            popper-class="console-select-popper"
+            @change="onYardProvinceChange"
+          >
+            <el-option v-for="o in dict.provinces" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="市">
+          <el-select
+            v-model="yardForm.city"
+            style="width: 100%"
+            placeholder="选择城市"
+            teleported
+            popper-class="console-select-popper"
+            :disabled="!yardForm.province"
+          >
+            <el-option v-for="o in yardCityOptions" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="经度"><el-input v-model.number="yardForm.lng" type="number" step="0.0001" /></el-form-item>
+        <el-form-item label="纬度"><el-input v-model.number="yardForm.lat" type="number" step="0.0001" /></el-form-item>
         <el-form-item label="容量"><el-input v-model.number="yardForm.capacity" type="number" /></el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="yardForm.status" style="width:100%"><el-option label="normal" value="normal" /><el-option label="busy" value="busy" /><el-option label="warning" value="warning" /></el-select>
+          <el-select v-model="yardForm.status" style="width: 100%" teleported popper-class="console-select-popper">
+            <el-option v-for="o in dict.items('yard_status')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -230,7 +279,18 @@
     <el-dialog v-model="cargoDlg" :title="cargoEditId ? '编辑货种' : '新增货种'" width="440px" destroy-on-close>
       <el-form label-width="100px">
         <el-form-item label="yard_id"><el-input v-model.number="cargoForm.yard_id" type="number" /></el-form-item>
-        <el-form-item label="货类"><el-input v-model="cargoForm.category" /></el-form-item>
+        <el-form-item label="货类">
+          <el-select
+            v-model="cargoForm.category"
+            style="width: 100%"
+            filterable
+            allow-create
+            teleported
+            popper-class="console-select-popper"
+          >
+            <el-option v-for="o in dict.items('cargo_category')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="货量"><el-input v-model.number="cargoForm.volume" type="number" /></el-form-item>
       </el-form>
       <template #footer>
@@ -243,8 +303,23 @@
     <el-dialog v-model="alertDlg" :title="alertEditId ? '编辑预警' : '新增预警'" width="520px" destroy-on-close>
       <el-form label-width="100px">
         <el-form-item label="yard_id"><el-input v-model.number="alertForm.yard_id" type="number" /></el-form-item>
-        <el-form-item label="级别"><el-input v-model="alertForm.level" /></el-form-item>
-        <el-form-item label="类型"><el-input v-model="alertForm.alert_type" /></el-form-item>
+        <el-form-item label="级别">
+          <el-select v-model="alertForm.level" style="width: 100%" teleported popper-class="console-select-popper">
+            <el-option v-for="o in dict.items('alert_level')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select
+            v-model="alertForm.alert_type"
+            style="width: 100%"
+            filterable
+            allow-create
+            teleported
+            popper-class="console-select-popper"
+          >
+            <el-option v-for="o in dict.items('alert_type')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="内容"><el-input v-model="alertForm.message" type="textarea" rows="3" /></el-form-item>
       </el-form>
       <template #footer>
@@ -260,7 +335,11 @@
         <el-form-item label="起点编码"><el-input v-model="vehForm.from_yard_code" /></el-form-item>
         <el-form-item label="终点编码"><el-input v-model="vehForm.to_yard_code" /></el-form-item>
         <el-form-item label="progress"><el-input v-model.number="vehForm.progress" type="number" step="0.01" /></el-form-item>
-        <el-form-item label="status"><el-input v-model="vehForm.status" /></el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="vehForm.status" style="width: 100%" teleported popper-class="console-select-popper">
+            <el-option v-for="o in dict.items('vehicle_status')" :key="o.code" :label="o.label" :value="o.code" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="vehDlg = false">取消</el-button>
@@ -272,12 +351,15 @@
 
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from "element-plus";
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { dataConsole } from "@/api/dataConsole";
+import { geocodeAddress } from "@/composables/useGeocoder";
+import { useDictStore } from "@/store/dict";
 
 const router = useRouter();
+const dict = useDictStore();
 const active = ref("yards");
 const importHelp = ref<Record<string, string>>({});
 
@@ -297,12 +379,18 @@ onMounted(async () => {
   } catch {
     importHelp.value = {};
   }
+  try {
+    await dict.preloadCommon();
+    await dict.ensure("city");
+  } catch {
+    /* 字典未迁移时仍可手动录入 */
+  }
   loadYards();
 });
 
 function err(e: unknown) {
-  const x = e as { response?: { data?: { detail?: string } } };
-  ElMessage.error(x?.response?.data?.detail || "请求失败");
+  const x = e as { response?: { data?: { detail?: string } }; message?: string };
+  ElMessage.error(x?.response?.data?.detail || x?.message || "请求失败");
 }
 
 // —— yards ——
@@ -311,6 +399,8 @@ const yardsTotal = ref(0);
 const yardsLoading = ref(false);
 const yardDlg = ref(false);
 const yardEditId = ref<number | null>(null);
+const yardAddress = ref("");
+const geocodeLoading = ref(false);
 const yardForm = ref({
   name: "",
   code: "",
@@ -322,6 +412,59 @@ const yardForm = ref({
   capacity: 0,
   status: "normal",
 });
+
+const yardCityOptions = computed(() => dict.citiesOfProvince(yardForm.value.province));
+
+function onYardProvinceChange() {
+  yardForm.value.city = "";
+}
+
+async function onYardDlgOpened() {
+  await dict.preloadCommon();
+  await dict.ensure("city");
+}
+
+function matchDictCode(type: string, raw: string, parent?: string): string {
+  const code = raw.trim();
+  if (!code) return "";
+  const items = dict.items(type, parent);
+  const hit = items.find((r) => r.code === code || r.label === code);
+  return hit?.code ?? code;
+}
+
+function warnIfNotInDict(type: string, value: string, parent?: string) {
+  if (!value) return;
+  const items = dict.items(type, parent);
+  if (items.length && !items.some((r) => r.code === value)) {
+    ElMessage.warning(`「${value}」不在系统字典中，请先在系统管理维护`);
+  }
+}
+
+async function resolveYardAddress() {
+  if (!yardAddress.value.trim()) {
+    ElMessage.warning("请先填写详细地址");
+    return;
+  }
+  geocodeLoading.value = true;
+  try {
+    const r = await geocodeAddress(yardAddress.value, yardForm.value.city || undefined);
+    if (!r) return;
+    const prov = matchDictCode("province", r.province);
+    yardForm.value.province = prov;
+    warnIfNotInDict("province", prov);
+    const cities = await dict.ensureCities(prov);
+    const cityHit = cities.find((c) => c.code === r.city || c.label === r.city);
+    yardForm.value.city = cityHit?.code ?? r.city;
+    if (!cityHit && r.city) warnIfNotInDict("city", r.city, prov);
+    yardForm.value.lng = Number(r.lng.toFixed(6));
+    yardForm.value.lat = Number(r.lat.toFixed(6));
+    ElMessage.success(r.formattedAddress ? `已解析：${r.formattedAddress}` : "坐标已回填，可继续手动调整");
+  } catch (e) {
+    err(e);
+  } finally {
+    geocodeLoading.value = false;
+  }
+}
 
 async function loadYards() {
   yardsLoading.value = true;
@@ -338,6 +481,7 @@ async function loadYards() {
 
 function openYardAdd() {
   yardEditId.value = null;
+  yardAddress.value = "";
   yardForm.value = {
     name: "",
     code: "",
@@ -355,6 +499,7 @@ function openYardAdd() {
 function openYardEdit(row: any) {
   yardEditId.value = row.id;
   yardForm.value = { ...row };
+  yardAddress.value = `${row.province || ""}${row.city || ""}${row.name || ""}`.trim();
   yardDlg.value = true;
 }
 
@@ -962,4 +1107,14 @@ async function importVehCsv(file: File) {
 :deep(.el-table .el-button.is-link.el-button--danger) {
   color: #ff9aad;
 }
+
+.addr-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  .el-input {
+    flex: 1;
+  }
+}
+
 </style>

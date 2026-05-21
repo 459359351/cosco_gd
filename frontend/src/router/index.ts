@@ -11,6 +11,11 @@ const router = createRouter({
       name: "DataConsole",
       component: () => import("@/views/DataConsole.vue"),
     },
+    {
+      path: "/system-admin",
+      name: "SystemAdmin",
+      component: () => import("@/views/SystemAdmin.vue"),
+    },
   ],
 });
 

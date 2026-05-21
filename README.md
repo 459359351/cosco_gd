@@ -46,6 +46,8 @@ cp .env.example .env   # 若尚未复制
 python -m alembic upgrade head
 ```
 
+迁移包含 `sys_dict` 系统字典表（省份、城市、堆场状态等）。若库已存在且未跑最新迁移，请执行 `python -m alembic upgrade head`；也可补种：`python scripts/seed_sys_dict.py`。
+
 若出现 `Connection refused`：先确认 `docker compose ps` 中 db/redis 已启动，且 `backend/.env` 里 `DATABASE_URL` / `REDIS_URL` 指向 `localhost`（与映射端口一致）。
 
 **本机自行安装 PostgreSQL / Redis** 亦可，需自建库 `cosco_gd` 并保证端口与 `.env` 一致；团队协同时**以 Docker 为准**，避免环境不一致。
@@ -173,6 +175,26 @@ npm run dev
 
 更多环境变量说明见 `[frontend/.env.example](frontend/.env.example)`。
 
+**高德地址解析（数据管理台新增堆场）**：除 `VITE_AMAP_KEY` 外，若控制台启用了安全密钥，须配置 `VITE_AMAP_SECURITY`，否则 Geocoder 可能鉴权失败。
+
+---
+
+## 管理页面
+
+| 路径 | 说明 |
+|------|------|
+| `/` | 数据驾驶舱（省份筛选来自 `sys_dict`） |
+| `/data-console` | PostgreSQL 数据管理台：六张业务表 CRUD + CSV 导入；堆场支持「详细地址 → 解析坐标」并保留经纬度手填 |
+| `/system-admin` | 系统管理：维护省份、城市、堆场类型/状态、货种、预警级别/类型、车辆状态等字典 |
+
+驾驶舱地图区工具条可进入 **系统管理** / **数据管理**。当前管理接口**无登录鉴权**，仅适合内网或开发环境。
+
+### 系统字典 API
+
+- `GET /api/v1/sys-dict/types`
+- `GET /api/v1/sys-dict?type=province&parent=&enabled_only=true`
+- `POST /api/v1/sys-dict`、`PATCH /api/v1/sys-dict/{id}`、`DELETE /api/v1/sys-dict/{id}`
+
 ---
 
 ## 核心接口
@@ -185,6 +207,8 @@ npm run dev
 - `GET /api/v1/ranking/yards?metric=teu&top=10`
 - `GET /api/v1/alerts/recent`
 - `GET /api/v1/flow/od`
+- `GET /api/v1/data-console/*`（数据管理台）
+- `GET /api/v1/sys-dict/*`（系统字典）
 - `WS /ws/realtime`
 
 ---

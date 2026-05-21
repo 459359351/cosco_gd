@@ -1,0 +1,94 @@
+/* 数据管理台 / 系统管理：弹窗与下拉（teleport 到 body，须全局样式） */
+
+.console-dlg-overlay {
+  background-color: rgba(2, 12, 28, 0.72) !important;
+}
+
+.console-dlg.el-dialog {
+  background: rgba(8, 28, 52, 0.98) !important;
+  border: 1px solid rgba(80, 200, 255, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 20, 50, 0.55);
+}
+
+.console-dlg .el-dialog__header {
+  border-bottom: 1px solid rgba(80, 200, 255, 0.2);
+  margin-right: 0;
+  padding-bottom: 12px;
+}
+
+.console-dlg .el-dialog__title,
+.console-dlg .el-dialog__body,
+.console-dlg .el-form-item__label {
+  color: #e8f4ff !important;
+}
+
+.console-dlg .el-dialog__headerbtn .el-dialog__close {
+  color: #9ec8e8;
+}
+
+.console-dlg .el-dialog__headerbtn:hover .el-dialog__close {
+  color: #5cefff;
+}
+
+.console-dlg .el-dialog__footer {
+  border-top: 1px solid rgba(80, 200, 255, 0.2);
+}
+
+.console-dlg .el-input__wrapper,
+.console-dlg .el-select__wrapper,
+.console-dlg .el-textarea__inner {
+  background-color: rgba(12, 40, 72, 0.9) !important;
+  box-shadow: 0 0 0 1px rgba(80, 200, 255, 0.25) inset !important;
+}
+
+.console-dlg .el-input__inner,
+.console-dlg .el-textarea__inner {
+  color: #e8f4ff !important;
+}
+
+.console-dlg .el-input.is-disabled .el-input__wrapper {
+  background-color: rgba(8, 28, 48, 0.85) !important;
+}
+
+.console-dlg .el-input__inner::placeholder,
+.console-dlg .el-textarea__inner::placeholder {
+  color: #7a9ab8;
+}
+
+.console-dlg .el-switch__core {
+  border-color: rgba(100, 200, 255, 0.35);
+  background: rgba(20, 50, 80, 0.9);
+}
+
+.console-dlg .el-button--default {
+  --el-button-bg-color: rgba(20, 70, 118, 0.75);
+  --el-button-border-color: rgba(100, 200, 255, 0.35);
+  --el-button-text-color: #e8f4ff;
+  --el-button-hover-bg-color: rgba(30, 95, 155, 0.85);
+  --el-button-hover-text-color: #fff;
+}
+
+.console-select-popper.el-popper {
+  background: rgba(8, 28, 52, 0.98) !important;
+  border: 1px solid rgba(80, 200, 255, 0.35) !important;
+}
+
+.console-select-popper .el-select-dropdown__item {
+  color: #c8dff5;
+}
+
+.console-select-popper .el-select-dropdown__item.hover,
+.console-select-popper .el-select-dropdown__item:hover {
+  background: rgba(30, 100, 155, 0.35);
+  color: #e8f4ff;
+}
+
+.console-select-popper .el-select-dropdown__item.is-selected {
+  color: #5cefff;
+  font-weight: 600;
+}
+
+.console-select-popper .el-popper__arrow::before {
+  background: rgba(8, 28, 52, 0.98) !important;
+  border-color: rgba(80, 200, 255, 0.35) !important;
+}
