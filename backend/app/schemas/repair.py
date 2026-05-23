@@ -57,3 +57,15 @@ class CumulativeItem(BaseModel):
     cum_qty_yoy: int = 0
     cum_revenue: float = 0.0
     cum_revenue_yoy: float = 0.0
+
+
+class NetworkSiteItem(BaseModel):
+    name: str
+    code: str
+    company_type: str
+    parent_name: str = ""
+    province: str = ""
+    city: str = ""
+    lng: float = 0.0
+    lat: float = 0.0
+    status: str = ""

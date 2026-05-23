@@ -8,7 +8,9 @@ import {
   getRepairKpi,
   getRepairOrgRanking,
   getRepairSiteDrilldown,
+  getNetworkSites,
 } from "@/api/repairDashboard";
+import type { NetworkSite } from "@/api/repairDashboard";
 
 export interface RepairKpiBlock {
   container_qty: number;
@@ -66,16 +68,18 @@ export const useRepairStore = defineStore("repair", () => {
   const siteDetails = ref<SiteDrilldownItem[]>([]);
   const customerDist = ref<CustomerDistItem[]>([]);
   const cumulative = ref<any[]>([]);
+  const sites = ref<NetworkSite[]>([]);
 
   const loadAll = async () => {
     loading.value = true;
     try {
-      const [kpiRes, selfRes, outRes, custRes, cumRes] = await Promise.all([
+      const [kpiRes, selfRes, outRes, custRes, cumRes, sitesRes] = await Promise.all([
         getRepairKpi(year.value, week.value),
         getRepairOrgRanking("self", "revenue", 10, year.value, week.value),
         getRepairOrgRanking("outsourced", "revenue", 10, year.value, week.value),
         getRepairCustomerDist(year.value, week.value),
         getRepairCumulative(year.value, week.value),
+        getNetworkSites(),
       ]);
 
       kpi.value = kpiRes;
@@ -83,6 +87,7 @@ export const useRepairStore = defineStore("repair", () => {
       outsourcedOrgs.value = outRes;
       customerDist.value = custRes;
       cumulative.value = cumRes;
+      sites.value = sitesRes;
 
       if (selfRes.length > 0 && !selectedParent.value) {
         await drilldown(selfRes[0].org_name);
@@ -120,6 +125,7 @@ export const useRepairStore = defineStore("repair", () => {
     siteDetails,
     customerDist,
     cumulative,
+    sites,
     loadAll,
     drilldown,
   };

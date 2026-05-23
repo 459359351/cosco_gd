@@ -245,6 +245,17 @@
           <p>导入失败: {{ excelError }}</p>
         </div>
       </el-tab-pane>
+
+      <!-- 网点坐标解析 -->
+      <el-tab-pane label="网点坐标" name="site-geocode">
+        <div class="toolbar">
+          <el-button type="primary" :loading="geocodeBusy" @click="batchGeocodeSites">
+            批量解析网点坐标
+          </el-button>
+          <span class="meta">解析 lng=0 的网点（用高德 JS SDK 地理编码）</span>
+        </div>
+        <div v-if="geocodeProgress">{{ geocodeProgress }}</div>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 堆场表单 -->
@@ -424,7 +435,12 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { dataConsole } from "@/api/dataConsole";
-import { previewExcelSheets, uploadWeeklyExcel } from "@/api/repairDashboard";
+import {
+  getNetworkSites,
+  batchUpdateSiteCoords,
+  previewExcelSheets,
+  uploadWeeklyExcel,
+} from "@/api/repairDashboard";
 import type { SheetInfo } from "@/api/repairDashboard";
 import { geocodeAddress } from "@/composables/useGeocoder";
 import { useDictStore } from "@/store/dict";
@@ -442,6 +458,56 @@ const previewLoading = ref(false);
 const importLoading = ref(false);
 const sheetPreview = ref<{ filename: string; sheets: (SheetInfo & { role: string })[] } | null>(null);
 const pendingFile = ref<File | null>(null);
+
+const geocodeBusy = ref(false);
+const geocodeProgress = ref("");
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+async function batchGeocodeSites() {
+  geocodeBusy.value = true;
+  geocodeProgress.value = "正在获取网点列表...";
+  try {
+    const sites = await getNetworkSites();
+    const missing = sites.filter((s: any) => !s.lng || !s.lat);
+    if (!missing.length) {
+      geocodeProgress.value = "所有网点已有坐标，无需解析。";
+      return;
+    }
+    geocodeProgress.value = `共 ${missing.length} 个网点待解析...`;
+    const results: Array<{ code: string; lng: number; lat: number; province?: string; city?: string }> = [];
+    let done = 0;
+    for (const site of missing) {
+      const address = `${site.parent_name} ${site.name}`;
+      try {
+        const geo = await withTimeout(geocodeAddress(address), 3000);
+        if (geo) {
+          results.push({ code: site.code, lng: geo.lng, lat: geo.lat, province: geo.province, city: geo.city });
+        }
+      } catch {
+        // skip failed geocode
+      }
+      done++;
+      geocodeProgress.value = `解析中 ${done}/${missing.length}（成功 ${results.length}）`;
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    if (results.length) {
+      await batchUpdateSiteCoords(results);
+    }
+    geocodeProgress.value = `完成！成功解析 ${results.length}/${missing.length} 个网点坐标。`;
+    ElMessage.success(`已回写 ${results.length} 个网点坐标`);
+  } catch (e: any) {
+    geocodeProgress.value = `失败: ${e.message}`;
+    ElMessage.error("批量解析失败");
+  } finally {
+    geocodeBusy.value = false;
+  }
+}
 
 async function previewExcel(file: File) {
   excelResult.value = null;

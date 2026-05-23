@@ -23,6 +23,21 @@ export const getRepairCustomerDist = (year = 2026, week = 20) =>
 export const getRepairCumulative = (year = 2026, week = 20) =>
   api.get("/repair/cumulative", { params: { year, week } }).then((r) => r.data);
 
+export const getNetworkSites = () =>
+  api.get("/repair/network-sites").then((r) => r.data as NetworkSite[]);
+
+export interface NetworkSite {
+  name: string;
+  code: string;
+  company_type: string;
+  parent_name: string;
+  province: string;
+  city: string;
+  lng: number;
+  lat: number;
+  status: string;
+}
+
 export const uploadWeeklyExcel = (file: File, year: number, week: number, yoySheet?: string) => {
   const fd = new FormData();
   fd.append("file", file);
@@ -47,3 +62,7 @@ export interface SheetInfo {
   detected_week: number | null;
   suggested_role: string | null;
 }
+
+export const batchUpdateSiteCoords = (
+  items: Array<{ code: string; lng: number; lat: number; province?: string; city?: string }>,
+) => api.post("/repair/network-sites/geocode", items).then((r) => r.data);

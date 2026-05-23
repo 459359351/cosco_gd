@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.repair import (
     RepairNetworkSite,
@@ -13,6 +14,7 @@ from app.models.repair import (
 from app.schemas.repair import (
     CumulativeItem,
     CustomerDistItem,
+    NetworkSiteItem,
     OrgRankItem,
     RepairKpiBlock,
     RepairKpiOverview,
@@ -21,6 +23,53 @@ from app.schemas.repair import (
 )
 
 router = APIRouter(tags=["repair"])
+
+
+@router.get("/network-sites", response_model=list[NetworkSiteItem])
+async def get_network_sites(db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(RepairNetworkSite))).scalars().all()
+    return [
+        NetworkSiteItem(
+            name=r.name,
+            code=r.code,
+            company_type=r.company_type,
+            parent_name=r.parent_name,
+            province=r.province,
+            city=r.city,
+            lng=r.lng,
+            lat=r.lat,
+            status=r.status,
+        )
+        for r in rows
+    ]
+
+
+@router.post("/network-sites/geocode")
+async def geocode_network_sites(
+    items: list[dict] = Body(..., description="[{code, lng, lat, province?, city?}]"),
+    db: AsyncSession = Depends(get_db),
+):
+    """前端批量解析坐标后回写。"""
+    if not items:
+        return {"updated": 0}
+
+    updated = 0
+    for item in items:
+        code = item.get("code")
+        if not code:
+            continue
+        row = (await db.execute(
+            select(RepairNetworkSite).where(RepairNetworkSite.code == code)
+        )).scalar_one_or_none()
+        if row:
+            row.lng = item.get("lng", 0.0)
+            row.lat = item.get("lat", 0.0)
+            row.province = item.get("province", "")
+            row.city = item.get("city", "")
+            updated += 1
+
+    await db.commit()
+    return {"updated": updated}
 
 
 @router.get("/kpi", response_model=RepairKpiOverview)
