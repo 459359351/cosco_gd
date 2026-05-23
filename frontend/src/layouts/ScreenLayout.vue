@@ -1,7 +1,7 @@
 <template>
   <div class="screen-wrapper">
     <header class="header panel">
-      <div class="title">COSCO GD 航运堆场数据驾驶舱</div>
+      <div class="title">集装箱修理业务驾驶舱</div>
       <div class="meta">
         <span>{{ now }}</span>
         <span class="dot" :class="{ online: realtime.connected }"></span>
@@ -15,7 +15,6 @@
     <main class="center panel"><slot name="center" /></main>
 
     <aside class="right-top panel"><slot name="right-top" /></aside>
-    <aside class="right-mid panel"><slot name="right-mid" /></aside>
     <aside class="right-bottom panel"><slot name="right-bottom" /></aside>
 
     <footer class="footer panel"><slot name="footer" /></footer>
@@ -111,11 +110,7 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 }
 .right-top {
   grid-column: 3;
-  grid-row: 2;
-}
-.right-mid {
-  grid-column: 3;
-  grid-row: 3;
+  grid-row: 2 / 4;
 }
 .right-bottom {
   grid-column: 3;

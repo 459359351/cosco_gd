@@ -312,3 +312,41 @@ async def import_help() -> dict:
         "alerts": "yard_id 或 yard_code, level, alert_type, message, created_at(可选 ISO)",
         "vehicles": "code,from_yard_code,to_yard_code,progress,status",
     }
+
+
+@router.post("/excel/weekly-import")
+async def excel_weekly_import(
+    year: int = Query(..., description="数据年份，如 2026"),
+    week: int = Query(..., description="数据周次，如 20"),
+    file: UploadFile = File(..., description=".xlsx 周报文件"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """上传 Excel 周报文件，解析并导入修理业务数据。"""
+    import tempfile
+    from pathlib import Path
+
+    from app.services.excel_importer import import_weekly_excel
+
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="仅支持 .xlsx/.xls 文件")
+
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        result = await import_weekly_excel(
+            db=db,
+            file_path=tmp_path,
+            year=year,
+            week=week,
+            filename=file.filename or "",
+        )
+        await db.commit()
+        return result
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
