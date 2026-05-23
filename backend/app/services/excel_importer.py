@@ -40,6 +40,12 @@ TOTAL_PATTERNS = {
     "outsourced_total": ("外包总计",),
 }
 
+YOY_ROLE_KEYWORDS = {
+    "inspection": ("检修",),
+    "network": ("经营单位",),
+    "cumulative": ("周完成", "完成情况"),
+}
+
 
 def _safe_float(val) -> float:
     if val is None:
@@ -73,6 +79,22 @@ def _make_code(name: str) -> str:
     return re.sub(r"[^\w一-鿿]", "", name)
 
 
+_SHEET_WEEK_RE = re.compile(r"(\d{4})\s*年?\s*第?\s*(\d{1,2})\s*周")
+
+
+def parse_sheet_name(name: str) -> dict:
+    m = _SHEET_WEEK_RE.search(name)
+    info: dict = {"detected_year": None, "detected_week": None, "suggested_role": None}
+    if m:
+        info["detected_year"] = int(m.group(1))
+        info["detected_week"] = int(m.group(2))
+    for role, keywords in YOY_ROLE_KEYWORDS.items():
+        if any(k in name for k in keywords):
+            info["suggested_role"] = role
+            break
+    return info
+
+
 # ---------------------------------------------------------------------------
 # 主解析器
 # ---------------------------------------------------------------------------
@@ -98,6 +120,30 @@ class WeeklyExcelImporter:
             "cumulative": self._parse_cumulative_sheet(),
         }
 
+    def parse_yoy(self, yoy_sheet_name: str) -> dict:
+        prev_year, prev_week = self._get_yoy_year_week()
+        if yoy_sheet_name not in self.wb.sheetnames:
+            return {"yoy_orgs": [], "yoy_summaries": []}
+        ws = self.wb[yoy_sheet_name]
+        return {
+            "yoy_orgs": self._parse_org_rows(ws, prev_year, prev_week),
+            "yoy_summaries": self._parse_summary_rows(ws, prev_year, prev_week),
+        }
+
+    def preview_sheets(self) -> list[dict]:
+        sheets: list[dict] = []
+        prev_year, prev_week = self._get_yoy_year_week()
+        for name in self.wb.sheetnames:
+            info = parse_sheet_name(name)
+            if info["detected_year"] == self.year and info["detected_week"] == self.week:
+                info["suggested_role"] = "current"
+            elif info["detected_year"] == prev_year and info["detected_week"] == prev_week:
+                info["suggested_role"] = "yoy"
+            elif info["suggested_role"] is None:
+                info["suggested_role"] = None
+            sheets.append({"name": name, **info})
+        return sheets
+
     # -- Sheet 定位 --
 
     def _find_sheet(self, *keywords: str):
@@ -122,7 +168,11 @@ class WeeklyExcelImporter:
         ws = self._find_main_sheet()
         if ws is None:
             return []
+        records = self._parse_org_rows(ws, self.year, self.week)
+        self.row_counts["orgs"] = len(records)
+        return records
 
+    def _parse_org_rows(self, ws, target_year: int, target_week: int) -> list[dict]:
         records: list[dict] = []
         current_type = ""
         in_summary_zone = False
@@ -131,7 +181,6 @@ class WeeklyExcelImporter:
             a_val = _cell(ws, row_idx, 1)
             b_val = _cell(ws, row_idx, 2)
 
-            # 到达汇总/明细分界线后停止
             if a_val and "网点明细" in str(a_val):
                 break
             if a_val and "全部干箱" in str(a_val):
@@ -151,15 +200,9 @@ class WeeklyExcelImporter:
             if not b_str or b_str == "0":
                 continue
 
-            # 跳过总计行
-            is_total = any(
-                kw in b_str
-                for kw in ("自营总计", "外包总计", "自营外包总计", "总计")
-            )
+            is_total = any(kw in b_str for kw in ("自营总计", "外包总计", "自营外包总计", "总计"))
             if is_total:
                 continue
-
-            # 跳过表头和统计行
             if b_str in ("部门/单位", "环比增减"):
                 continue
 
@@ -170,8 +213,8 @@ class WeeklyExcelImporter:
             for cust_type, cols in [("cosco", (3, 4, 5, 6, 7, 9, 20, 21, 22, 23)), ("thirdparty", (10, 11, 12, 13, 14, 16, 20, 21, 22, 23))]:
                 qty_col, qty_wow_col, rev_col, rev_wow_col, unit_col, move_col, total_qty_col, total_rev_col, per_capita_col, staff_col = cols
                 records.append({
-                    "year": self.year,
-                    "week": self.week,
+                    "year": target_year,
+                    "week": target_week,
                     "company_type": company_type,
                     "org_name": org_name,
                     "org_code": org_code,
@@ -188,14 +231,17 @@ class WeeklyExcelImporter:
                     "staff_count": _safe_int(_cell(ws, row_idx, staff_col)),
                 })
 
-        self.row_counts["orgs"] = len(records)
         return records
 
     def _parse_main_sheet_summaries(self) -> list[dict]:
         ws = self._find_main_sheet()
         if ws is None:
             return []
+        records = self._parse_summary_rows(ws, self.year, self.week)
+        self.row_counts["summaries"] = len(records)
+        return records
 
+    def _parse_summary_rows(self, ws, target_year: int, target_week: int) -> list[dict]:
         records: list[dict] = []
         in_summary_zone = False
         for row_idx in range(4, ws.max_row + 1):
@@ -209,7 +255,6 @@ class WeeklyExcelImporter:
             if in_summary_zone:
                 continue
 
-            # 在 A 列或 B 列查找总计行
             label = ""
             if b_val:
                 label = str(b_val).strip()
@@ -229,8 +274,8 @@ class WeeklyExcelImporter:
             for cust_type, cols in [("cosco", (3, 4, 5, 6, 7, 9, 20, 21, 22, 23)), ("thirdparty", (10, 11, 12, 13, 14, 16, 20, 21, 22, 23))]:
                 qty_col, qty_wow_col, rev_col, rev_wow_col, unit_col, move_col, total_qty_col, total_rev_col, per_capita_col, staff_col = cols
                 records.append({
-                    "year": self.year,
-                    "week": self.week,
+                    "year": target_year,
+                    "week": target_week,
                     "summary_type": matched_type,
                     "customer_type": cust_type,
                     "container_qty": _safe_int(_cell(ws, row_idx, qty_col)),
@@ -245,7 +290,6 @@ class WeeklyExcelImporter:
                     "staff_count": _safe_int(_cell(ws, row_idx, staff_col)),
                 })
 
-        self.row_counts["summaries"] = len(records)
         return records
 
     # -- 解析周检修业务统计数据 --
@@ -377,6 +421,9 @@ class WeeklyExcelImporter:
         self.row_counts["cumulative"] = len(records)
         return records
 
+    def _get_yoy_year_week(self) -> tuple[int, int]:
+        return self.year - 1, self.week - 1
+
 
 # ---------------------------------------------------------------------------
 # 数据库写入
@@ -389,6 +436,7 @@ async def import_weekly_excel(
     year: int,
     week: int,
     filename: str = "",
+    yoy_sheet: str | None = None,
 ) -> dict:
     log = ExcelUploadLog(
         year=year,
@@ -403,9 +451,7 @@ async def import_weekly_excel(
     try:
         importer = WeeklyExcelImporter(file_path, year, week)
 
-        # 先解析网点注册表（其他 Sheet 需要映射）
         sites_data = importer._parse_network_sites_sheet()
-
         data = importer.parse_all()
 
         # 清除旧数据（幂等）
@@ -451,8 +497,31 @@ async def import_weekly_excel(
         for r in data["cumulative"]:
             db.add(RepairWeeklyCumulative(**r))
 
+        # 同比数据导入
+        yoy_counts: dict[str, int] = {}
+        if yoy_sheet:
+            prev_year, prev_week = year - 1, week - 1
+            yoy_data = importer.parse_yoy(yoy_sheet)
+
+            for table in [RepairWeeklyOrg, RepairWeeklySummary]:
+                await db.execute(
+                    delete(table).where(table.year == prev_year, table.week == prev_week)
+                )
+
+            for r in yoy_data["yoy_orgs"]:
+                db.add(RepairWeeklyOrg(**r))
+            for r in yoy_data["yoy_summaries"]:
+                db.add(RepairWeeklySummary(**r))
+
+            yoy_counts = {
+                "yoy_orgs": len(yoy_data["yoy_orgs"]),
+                "yoy_summaries": len(yoy_data["yoy_summaries"]),
+                "yoy_year": prev_year,
+                "yoy_week": prev_week,
+            }
+
         log.status = "success"
-        log.row_counts = json.dumps(importer.row_counts, ensure_ascii=False)
+        log.row_counts = json.dumps({**importer.row_counts, **yoy_counts}, ensure_ascii=False)
         log.processed_at = datetime.now()
         await db.flush()
 
@@ -460,7 +529,7 @@ async def import_weekly_excel(
             "status": "success",
             "year": year,
             "week": week,
-            "row_counts": importer.row_counts,
+            "row_counts": {**importer.row_counts, **yoy_counts},
         }
 
     except Exception as exc:

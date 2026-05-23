@@ -176,6 +176,75 @@
           </el-table-column>
         </el-table>
       </el-tab-pane>
+
+      <!-- 周报 Excel 导入 -->
+      <el-tab-pane label="周报 Excel 导入" name="excel-import">
+        <!-- 第一步：上传预览 -->
+        <div v-if="!sheetPreview" class="toolbar">
+          <el-form :inline="true">
+            <el-form-item label="年份">
+              <el-input-number v-model="excelYear" :min="2020" :max="2030" :step="1" />
+            </el-form-item>
+            <el-form-item label="周次">
+              <el-input-number v-model="excelWeek" :min="1" :max="53" :step="1" />
+            </el-form-item>
+            <el-form-item>
+              <el-upload
+                :show-file-list="false"
+                accept=".xlsx,.xls"
+                :before-upload="previewExcel"
+              >
+                <template #trigger>
+                  <el-button type="primary" :loading="previewLoading">上传 Excel 预览</el-button>
+                </template>
+              </el-upload>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 第二步：Sheet 映射确认 -->
+        <div v-if="sheetPreview" class="sheet-preview">
+          <div class="toolbar">
+            <span class="meta">{{ sheetPreview.filename }} — 检测到 {{ sheetPreview.sheets.length }} 个 Sheet</span>
+            <el-button @click="resetPreview">取消</el-button>
+            <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+          </div>
+          <el-table :data="sheetPreview.sheets" stripe border max-height="50vh">
+            <el-table-column prop="name" label="Sheet 名称" min-width="200" />
+            <el-table-column label="检测年份" width="120">
+              <template #default="{ row }">{{ row.detected_year ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="检测周次" width="120">
+              <template #default="{ row }">{{ row.detected_week ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="角色" width="180">
+              <template #default="{ row }">
+                <el-select v-model="row.role" style="width: 100%" teleported popper-class="console-select-popper">
+                  <el-option label="当前周数据" value="current" />
+                  <el-option label="同比对照" value="yoy" />
+                  <el-option label="网点明细" value="inspection" />
+                  <el-option label="经营单位" value="network" />
+                  <el-option label="累计完成" value="cumulative" />
+                  <el-option label="忽略" value="ignore" />
+                </el-select>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div v-if="excelResult" class="excel-result">
+          <p>导入成功！</p>
+          <p>年份: {{ excelResult.year }}，周次: {{ excelResult.week }}</p>
+          <ul>
+            <li v-for="(count, key) in excelResult.row_counts" :key="key">
+              {{ key }}: {{ count }} 条
+            </li>
+          </ul>
+        </div>
+        <div v-if="excelError" class="excel-error">
+          <p>导入失败: {{ excelError }}</p>
+        </div>
+      </el-tab-pane>
     </el-tabs>
 
     <!-- 堆场表单 -->
@@ -355,6 +424,8 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { dataConsole } from "@/api/dataConsole";
+import { previewExcelSheets, uploadWeeklyExcel } from "@/api/repairDashboard";
+import type { SheetInfo } from "@/api/repairDashboard";
 import { geocodeAddress } from "@/composables/useGeocoder";
 import { useDictStore } from "@/store/dict";
 
@@ -362,6 +433,64 @@ const router = useRouter();
 const dict = useDictStore();
 const active = ref("yards");
 const importHelp = ref<Record<string, string>>({});
+
+const excelYear = ref(2026);
+const excelWeek = ref(20);
+const excelResult = ref<any>(null);
+const excelError = ref<string | null>(null);
+const previewLoading = ref(false);
+const importLoading = ref(false);
+const sheetPreview = ref<{ filename: string; sheets: (SheetInfo & { role: string })[] } | null>(null);
+const pendingFile = ref<File | null>(null);
+
+async function previewExcel(file: File) {
+  excelResult.value = null;
+  excelError.value = null;
+  previewLoading.value = true;
+  try {
+    const res = await previewExcelSheets(file, excelYear.value, excelWeek.value);
+    pendingFile.value = file;
+    sheetPreview.value = {
+      filename: res.filename,
+      sheets: res.sheets.map((s) => ({ ...s, role: s.suggested_role ?? "ignore" })),
+    };
+  } catch (e: any) {
+    excelError.value = e?.response?.data?.detail || e?.message || "预览失败";
+    ElMessage.error(excelError.value);
+  } finally {
+    previewLoading.value = false;
+  }
+  return false;
+}
+
+function resetPreview() {
+  sheetPreview.value = null;
+  pendingFile.value = null;
+}
+
+async function confirmImport() {
+  if (!sheetPreview.value || !pendingFile.value) return;
+  const yoySheet = sheetPreview.value.sheets.find((s) => s.role === "yoy");
+  importLoading.value = true;
+  excelError.value = null;
+  try {
+    const res = await uploadWeeklyExcel(
+      pendingFile.value,
+      excelYear.value,
+      excelWeek.value,
+      yoySheet?.name,
+    );
+    excelResult.value = res;
+    sheetPreview.value = null;
+    pendingFile.value = null;
+    ElMessage.success("Excel 周报导入成功");
+  } catch (e: any) {
+    excelError.value = e?.response?.data?.detail || e?.message || "导入失败";
+    ElMessage.error(excelError.value);
+  } finally {
+    importLoading.value = false;
+  }
+}
 
 watch(active, (n) => {
   if (n === "yards") loadYards();
@@ -1115,6 +1244,28 @@ async function importVehCsv(file: File) {
   .el-input {
     flex: 1;
   }
+}
+
+.excel-result {
+  padding: 16px;
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  border-radius: 6px;
+  color: #2ecc71;
+  p { margin: 4px 0; }
+  ul { padding-left: 20px; }
+  li { margin: 2px 0; }
+}
+.excel-error {
+  padding: 16px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+  color: #e74c3c;
+}
+
+.sheet-preview {
+  margin-bottom: 12px;
 }
 
 </style>

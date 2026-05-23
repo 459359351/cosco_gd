@@ -318,6 +318,7 @@ async def import_help() -> dict:
 async def excel_weekly_import(
     year: int = Query(..., description="数据年份，如 2026"),
     week: int = Query(..., description="数据周次，如 20"),
+    yoy_sheet: str | None = Query(None, description="同比 Sheet 名，如 '2025年19周'"),
     file: UploadFile = File(..., description=".xlsx 周报文件"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -342,11 +343,45 @@ async def excel_weekly_import(
             year=year,
             week=week,
             filename=file.filename or "",
+            yoy_sheet=yoy_sheet,
         )
         await db.commit()
         return result
     except Exception as exc:
         await db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc))
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@router.post("/excel/preview-sheets")
+async def excel_preview_sheets(
+    year: int = Query(..., description="数据年份，如 2026"),
+    week: int = Query(..., description="数据周次，如 20"),
+    file: UploadFile = File(..., description=".xlsx 文件"),
+) -> dict:
+    """上传 Excel 文件，返回 Sheet 列表及自动检测结果，不写入数据库。"""
+    import tempfile
+    from pathlib import Path
+
+    from app.services.excel_importer import WeeklyExcelImporter
+
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="仅支持 .xlsx/.xls 文件")
+
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        importer = WeeklyExcelImporter(tmp_path, year, week)
+        sheets = importer.preview_sheets()
+        return {
+            "filename": file.filename,
+            "sheets": sheets,
+        }
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
     finally:
         Path(tmp_path).unlink(missing_ok=True)
