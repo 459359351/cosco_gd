@@ -1,6 +1,7 @@
 <template>
   <div class="map-wrap">
     <div ref="containerRef" class="map-core"></div>
+    <canvas ref="flyCanvas" class="flyline-canvas"></canvas>
     <div class="layer-switch">
       <el-segmented v-model="selection.layer" :options="layerOptions" />
     </div>
@@ -17,11 +18,13 @@ import { useRepairStore } from "@/store/repair";
 import { useSelectionStore } from "@/store/selection";
 
 const containerRef = ref<HTMLElement | null>(null);
+const flyCanvas = ref<HTMLCanvasElement | null>(null);
 const repairStore = useRepairStore();
 const selection = useSelectionStore();
 const { layer } = storeToRefs(selection);
 const layerOptions = [
   { label: "散点", value: "point" },
+  { label: "飞线", value: "flyline" },
   { label: "热力", value: "heat" },
   { label: "3D", value: "3d" },
 ];
@@ -30,6 +33,16 @@ let map: any;
 let markerList: any[] = [];
 let heatLayer: any = null;
 let barMarkerList: any[] = [];
+let flylineDots: any[] = [];
+let flylineRafId: number | null = null;
+
+interface FlylineRoute {
+  start: [number, number];
+  end: [number, number];
+  color: string;
+  coords: [number, number][];
+}
+let flylineRoutes: FlylineRoute[] = [];
 
 /** 粤桂两翼默认视野 */
 const MAP_DEFAULT_CENTER: [number, number] = [112.97, 23.13];
@@ -109,6 +122,18 @@ const clearLayers = () => {
   heatLayer = null;
   barMarkerList.forEach((item) => item.setMap(null));
   barMarkerList = [];
+  flylineDots.forEach((d) => d.setMap(null));
+  flylineDots = [];
+  flylineRoutes = [];
+  if (flylineRafId !== null) {
+    cancelAnimationFrame(flylineRafId);
+    flylineRafId = null;
+  }
+  const cv = flyCanvas.value;
+  if (cv) {
+    const ctx = cv.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
+  }
 };
 
 const renderHeat = () => {
@@ -140,9 +165,130 @@ const renderBar3D = () => {
   });
 };
 
+/* ---------- 飞线：Canvas 叠加层 ---------- */
+
+const bezierCtrl = (s: [number, number], e: [number, number]): [number, number] => {
+  const dx = e[0] - s[0], dy = e[1] - s[1];
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 1e-6) return [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
+  const off = d * 0.25;
+  return [(s[0] + e[0]) / 2 + (-dy / d) * off, (s[1] + e[1]) / 2 + (dx / d) * off];
+};
+
+const bezierCoords = (s: [number, number], e: [number, number], seg = 30): [number, number][] => {
+  const [cx, cy] = bezierCtrl(s, e);
+  return Array.from({ length: seg + 1 }, (_, i) => {
+    const t = i / seg;
+    return [
+      (1 - t) * (1 - t) * s[0] + 2 * (1 - t) * t * cx + t * t * e[0],
+      (1 - t) * (1 - t) * s[1] + 2 * (1 - t) * t * cy + t * t * e[1],
+    ] as [number, number];
+  });
+};
+
+const drawFlylineCanvas = () => {
+  const cv = flyCanvas.value;
+  if (!cv || !map || !flylineRoutes.length) return;
+  const size = map.getSize();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size.width * dpr;
+  cv.height = size.height * dpr;
+  cv.style.width = size.width + "px";
+  cv.style.height = size.height + "px";
+  const ctx = cv.getContext("2d")!;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size.width, size.height);
+
+  for (const fl of flylineRoutes) {
+    const sp = map.lngLatToContainer(new window.AMap.LngLat(fl.start[0], fl.start[1]));
+    const ep = map.lngLatToContainer(new window.AMap.LngLat(fl.end[0], fl.end[1]));
+    const cp = bezierCtrl(
+      [sp.getX(), sp.getY()],
+      [ep.getX(), ep.getY()],
+    );
+
+    // Glow
+    ctx.beginPath();
+    ctx.moveTo(sp.getX(), sp.getY());
+    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
+    ctx.strokeStyle = fl.color + "30";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    // Core
+    ctx.beginPath();
+    ctx.moveTo(sp.getX(), sp.getY());
+    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
+    ctx.strokeStyle = fl.color + "AA";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+};
+
+const renderFlylines = () => {
+  const sites = validSites();
+  if (!sites.length || !map) return;
+
+  const groups: Record<string, typeof sites> = {};
+  for (const s of sites) {
+    (groups[s.parent_name || "__none__"] ??= []).push(s);
+  }
+
+  flylineRoutes = [];
+  for (const children of Object.values(groups)) {
+    if (children.length < 2) continue;
+    const cx = children.reduce((a, c) => a + c.lng, 0) / children.length;
+    const cy = children.reduce((a, c) => a + c.lat, 0) / children.length;
+    if (!isFinite(cx) || !isFinite(cy)) continue;
+    for (const child of children) {
+      if (!isFinite(child.lng) || !isFinite(child.lat)) continue;
+      const color = markerColor(child.company_type);
+      const coords = bezierCoords([child.lng, child.lat], [cx, cy]);
+      flylineRoutes.push({ start: [child.lng, child.lat], end: [cx, cy], color, coords });
+    }
+  }
+
+  drawFlylineCanvas();
+
+  // Animated dot markers
+  flylineDots = flylineRoutes.map((fl) => {
+    const dot = new window.AMap.Marker({
+      position: fl.start,
+      content: `<div style="width:5px;height:5px;border-radius:50%;background:${fl.color};box-shadow:0 0 6px ${fl.color},0 0 14px ${fl.color}66;"></div>`,
+      offset: new window.AMap.Pixel(-2.5, -2.5),
+    });
+    dot.setMap(map);
+    return dot;
+  });
+
+  const anims = flylineRoutes.map((fl, i) => ({
+    marker: flylineDots[i],
+    coords: fl.coords,
+    duration: 3000 + Math.random() * 2000,
+    startTime: performance.now() + Math.random() * 3000,
+  }));
+
+  const step = (now: number) => {
+    for (const a of anims) {
+      const t = (((now - a.startTime) % a.duration) + a.duration) % a.duration / a.duration;
+      const rawIdx = t * (a.coords.length - 1);
+      const idx = Math.min(Math.floor(rawIdx), a.coords.length - 2);
+      const frac = rawIdx - idx;
+      const lng = a.coords[idx][0] + (a.coords[idx + 1][0] - a.coords[idx][0]) * frac;
+      const lat = a.coords[idx][1] + (a.coords[idx + 1][1] - a.coords[idx][1]) * frac;
+      if (isFinite(lng) && isFinite(lat)) a.marker.setPosition([lng, lat]);
+    }
+    flylineRafId = requestAnimationFrame(step);
+  };
+  flylineRafId = requestAnimationFrame(step);
+};
+
 const renderLayer = (val: string) => {
   clearLayers();
-  markerList.forEach((m) => m.setMap(val === "point" ? map : null));
+  const showMarkers = val === "point" || val === "flyline";
+  markerList.forEach((m) => m.setMap(showMarkers ? map : null));
+  if (val === "flyline") renderFlylines();
   if (val === "heat") renderHeat();
   if (val === "3d") renderBar3D();
 };
@@ -156,6 +302,9 @@ onMounted(async () => {
     mapStyle: "amap://styles/darkblue",
     pitch: 40,
   });
+  map.on("viewchange", () => {
+    if (flylineRoutes.length) drawFlylineCanvas();
+  });
   redrawMarkers();
   renderLayer(selection.layer);
 });
@@ -164,6 +313,7 @@ watch(() => repairStore.sites, redrawMarkers, { deep: true });
 watch(layer, (val) => renderLayer(val));
 
 onUnmounted(() => {
+  if (flylineRafId !== null) cancelAnimationFrame(flylineRafId);
   map?.destroy();
 });
 </script>
@@ -177,6 +327,15 @@ onUnmounted(() => {
 .map-core {
   width: 100%;
   height: 100%;
+}
+.flyline-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
 }
 .layer-switch {
   position: absolute;
