@@ -2,8 +2,13 @@
   <div class="map-wrap">
     <div ref="containerRef" class="map-core"></div>
     <canvas ref="flyCanvas" class="flyline-canvas"></canvas>
-    <div class="layer-switch">
-      <el-segmented v-model="selection.layer" :options="layerOptions" />
+    <div class="map-controls">
+      <div class="region-switch">
+        <el-segmented v-model="regionKey" :options="regionOptions" />
+      </div>
+      <div class="layer-switch">
+        <el-segmented v-model="selection.layer" :options="layerOptions" />
+      </div>
     </div>
   </div>
 </template>
@@ -29,6 +34,13 @@ const layerOptions = [
   { label: "3D", value: "3d" },
 ];
 
+const regionKey = ref<"all" | "guangdong" | "guangzhou">("all");
+const regionOptions = [
+  { label: "全部", value: "all" },
+  { label: "广东", value: "guangdong" },
+  { label: "广州", value: "guangzhou" },
+];
+
 let map: any;
 let markerList: any[] = [];
 let heatLayer: any = null;
@@ -48,12 +60,19 @@ let flylineRoutes: FlylineRoute[] = [];
 const MAP_DEFAULT_CENTER: [number, number] = [112.97, 23.13];
 const MAP_DEFAULT_ZOOM = 6.8;
 
-/** 只有有效坐标的网点 */
+/** 所有有效坐标的网点 */
 const validSites = () => (repairStore.sites || []).filter((s) => s.lng && s.lat);
 
-const fitMapToSites = () => {
-  if (!map || !window.AMap) return;
+/** 按地区筛选后的网点 */
+const filteredSites = () => {
   const sites = validSites();
+  if (regionKey.value === "guangdong") return sites.filter((s) => s.province === "广东");
+  if (regionKey.value === "guangzhou") return sites.filter((s) => s.city === "广州");
+  return sites;
+};
+
+const fitMapToSites = (sites: ReturnType<typeof filteredSites>) => {
+  if (!map || !window.AMap) return;
   if (!sites.length) {
     map.setZoomAndCenter(MAP_DEFAULT_ZOOM, MAP_DEFAULT_CENTER, true, 500);
     return;
@@ -67,9 +86,8 @@ const fitMapToSites = () => {
   const sw = new window.AMap.LngLat(Math.min(...lngs), Math.min(...lats));
   const ne = new window.AMap.LngLat(Math.max(...lngs), Math.max(...lats));
   const bounds = new window.AMap.Bounds(sw, ne);
-  const padding = [100, 120, 120, 120];
   if (typeof map.setBounds === "function") {
-    map.setBounds(bounds, true, padding);
+    map.setBounds(bounds, true, [100, 120, 120, 120]);
   }
 };
 
@@ -79,7 +97,8 @@ const markerColor = (type: string) =>
 const redrawMarkers = () => {
   if (!map) return;
   markerList.forEach((m) => m.setMap(null));
-  markerList = validSites().map((site) => {
+  const sites = filteredSites();
+  markerList = sites.map((site) => {
     const color = markerColor(site.company_type);
     const marker = new window.AMap.Marker({
       position: [site.lng, site.lat],
@@ -114,7 +133,7 @@ const redrawMarkers = () => {
     marker.setMap(map);
     return marker;
   });
-  fitMapToSites();
+  fitMapToSites(sites);
 };
 
 const clearLayers = () => {
@@ -137,7 +156,7 @@ const clearLayers = () => {
 };
 
 const renderHeat = () => {
-  const sites = validSites();
+  const sites = filteredSites();
   if (!sites.length) return;
   heatLayer = new window.AMap.HeatMap(map!, {
     radius: 28,
@@ -150,7 +169,7 @@ const renderHeat = () => {
 };
 
 const renderBar3D = () => {
-  const sites = validSites();
+  const sites = filteredSites();
   if (!sites.length) return;
   barMarkerList = sites.map((site) => {
     const color = markerColor(site.company_type);
@@ -207,7 +226,6 @@ const drawFlylineCanvas = () => {
       [ep.getX(), ep.getY()],
     );
 
-    // Glow
     ctx.beginPath();
     ctx.moveTo(sp.getX(), sp.getY());
     ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
@@ -216,7 +234,6 @@ const drawFlylineCanvas = () => {
     ctx.lineCap = "round";
     ctx.stroke();
 
-    // Core
     ctx.beginPath();
     ctx.moveTo(sp.getX(), sp.getY());
     ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
@@ -227,7 +244,7 @@ const drawFlylineCanvas = () => {
 };
 
 const renderFlylines = () => {
-  const sites = validSites();
+  const sites = filteredSites();
   if (!sites.length || !map) return;
 
   const groups: Record<string, typeof sites> = {};
@@ -251,7 +268,6 @@ const renderFlylines = () => {
 
   drawFlylineCanvas();
 
-  // Animated dot markers
   flylineDots = flylineRoutes.map((fl) => {
     const dot = new window.AMap.Marker({
       position: fl.start,
@@ -293,6 +309,11 @@ const renderLayer = (val: string) => {
   if (val === "3d") renderBar3D();
 };
 
+const fullRedraw = () => {
+  redrawMarkers();
+  renderLayer(selection.layer);
+};
+
 onMounted(async () => {
   const AMap = await useAMapLoader();
   map = new AMap.Map(containerRef.value, {
@@ -305,12 +326,12 @@ onMounted(async () => {
   map.on("viewchange", () => {
     if (flylineRoutes.length) drawFlylineCanvas();
   });
-  redrawMarkers();
-  renderLayer(selection.layer);
+  fullRedraw();
 });
 
-watch(() => repairStore.sites, redrawMarkers, { deep: true });
+watch(() => repairStore.sites, fullRedraw, { deep: true });
 watch(layer, (val) => renderLayer(val));
+watch(regionKey, () => fullRedraw());
 
 onUnmounted(() => {
   if (flylineRafId !== null) cancelAnimationFrame(flylineRafId);
@@ -337,10 +358,14 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 5;
 }
-.layer-switch {
+.map-controls {
   position: absolute;
   right: 12px;
   bottom: 12px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
 }
 </style>

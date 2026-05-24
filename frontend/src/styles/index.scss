@@ -24,6 +24,32 @@ body,
   white-space: nowrap;
 }
 
+.site-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color);
+    box-shadow: 0 0 6px var(--color), 0 0 14px var(--color);
+    flex-shrink: 0;
+  }
+
+  span {
+    font-size: 11px;
+    color: #d9f2ff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    line-height: 1;
+  }
+}
+
 .yard-marker.warning {
   border-color: #ffb100;
 }
