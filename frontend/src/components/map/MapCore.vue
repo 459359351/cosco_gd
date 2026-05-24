@@ -358,7 +358,7 @@ onUnmounted(() => {
 }
 .region-switch {
   position: absolute;
-  left: 12px;
+  right: 12px;
   top: 12px;
   z-index: 10;
 }
