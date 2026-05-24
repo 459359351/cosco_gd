@@ -2,13 +2,11 @@
   <div class="map-wrap">
     <div ref="containerRef" class="map-core"></div>
     <canvas ref="flyCanvas" class="flyline-canvas"></canvas>
-    <div class="map-controls">
-      <div class="region-switch">
-        <el-segmented v-model="regionKey" :options="regionOptions" />
-      </div>
-      <div class="layer-switch">
-        <el-segmented v-model="selection.layer" :options="layerOptions" />
-      </div>
+    <div class="region-switch">
+      <el-segmented v-model="regionKey" :options="regionOptions" />
+    </div>
+    <div class="layer-switch">
+      <el-segmented v-model="selection.layer" :options="layerOptions" />
     </div>
   </div>
 </template>
@@ -358,14 +356,16 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 5;
 }
-.map-controls {
+.region-switch {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 10;
+}
+.layer-switch {
   position: absolute;
   right: 12px;
   bottom: 12px;
   z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-end;
 }
 </style>
