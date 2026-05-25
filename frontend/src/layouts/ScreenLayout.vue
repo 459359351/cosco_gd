@@ -33,7 +33,7 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   position: relative;
   display: grid;
   grid-template-columns: 420px 1fr 420px;
-  grid-template-rows: 88px 260px 210px 1fr 125px;
+  grid-template-rows: 88px 260px 210px 1fr 260px;
   gap: 10px;
   width: 1920px;
   height: 1080px;
