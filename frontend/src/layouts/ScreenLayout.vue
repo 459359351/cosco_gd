@@ -62,8 +62,9 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   grid-column: 1 / 4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 20px;
+  position: relative;
 }
 .title {
   font-size: 30px;
@@ -72,6 +73,8 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   text-shadow: 0 0 12px rgba(84, 229, 255, 0.65);
 }
 .meta {
+  position: absolute;
+  right: 20px;
   display: flex;
   gap: 14px;
   align-items: center;
