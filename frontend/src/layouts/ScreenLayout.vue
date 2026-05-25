@@ -1,10 +1,9 @@
 <template>
   <div class="screen-wrapper">
     <header class="header panel">
-      <div class="title">COSCO GD 航运堆场数据驾驶舱</div>
+      <div class="title">集装箱修理业务驾驶舱</div>
       <div class="meta">
         <span>{{ now }}</span>
-        <span class="dot" :class="{ online: realtime.connected }"></span>
       </div>
     </header>
 
@@ -15,7 +14,6 @@
     <main class="center panel"><slot name="center" /></main>
 
     <aside class="right-top panel"><slot name="right-top" /></aside>
-    <aside class="right-mid panel"><slot name="right-mid" /></aside>
     <aside class="right-bottom panel"><slot name="right-bottom" /></aside>
 
     <footer class="footer panel"><slot name="footer" /></footer>
@@ -26,9 +24,6 @@
 import { useNow } from "@vueuse/core";
 import { computed } from "vue";
 
-import { useRealtimeStore } from "@/store/realtime";
-
-const realtime = useRealtimeStore();
 const nowRef = useNow({ interval: 1000 });
 const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 </script>
@@ -38,8 +33,8 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   position: relative;
   display: grid;
   grid-template-columns: 420px 1fr 420px;
-  grid-template-rows: 88px 1fr 1fr 1fr 220px;
-  gap: 12px;
+  grid-template-rows: 88px 260px 210px 1fr 260px;
+  gap: 10px;
   width: 1920px;
   height: 1080px;
   &::after {
@@ -67,8 +62,9 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   grid-column: 1 / 4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 20px;
+  position: relative;
 }
 .title {
   font-size: 30px;
@@ -77,19 +73,11 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   text-shadow: 0 0 12px rgba(84, 229, 255, 0.65);
 }
 .meta {
+  position: absolute;
+  right: 20px;
   display: flex;
   gap: 14px;
   align-items: center;
-}
-.dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #7f8c9a;
-}
-.dot.online {
-  background: #24f0a9;
-  box-shadow: 0 0 10px #24f0a9;
 }
 .left-top {
   grid-column: 1;
@@ -111,11 +99,7 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 }
 .right-top {
   grid-column: 3;
-  grid-row: 2;
-}
-.right-mid {
-  grid-column: 3;
-  grid-row: 3;
+  grid-row: 2 / 4;
 }
 .right-bottom {
   grid-column: 3;

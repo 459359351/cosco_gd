@@ -1,6 +1,10 @@
 <template>
   <div class="map-wrap">
     <div ref="containerRef" class="map-core"></div>
+    <canvas ref="flyCanvas" class="flyline-canvas"></canvas>
+    <div class="region-switch">
+      <el-segmented v-model="regionKey" :options="regionOptions" />
+    </div>
     <div class="layer-switch">
       <el-segmented v-model="selection.layer" :options="layerOptions" />
     </div>
@@ -13,115 +17,105 @@ import { storeToRefs } from "pinia";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
 import { useAMapLoader } from "@/composables/useAMapLoader";
-import { useRealtimeStore } from "@/store/realtime";
+import { useRepairStore } from "@/store/repair";
 import { useSelectionStore } from "@/store/selection";
-import { useYardStore } from "@/store/yard";
 
 const containerRef = ref<HTMLElement | null>(null);
-const yardStore = useYardStore();
+const flyCanvas = ref<HTMLCanvasElement | null>(null);
+const repairStore = useRepairStore();
 const selection = useSelectionStore();
-const realtime = useRealtimeStore();
-const { yardId, layer } = storeToRefs(selection);
-const { alertPulseYardId } = storeToRefs(realtime);
+const { layer } = storeToRefs(selection);
 const layerOptions = [
   { label: "散点", value: "point" },
+  { label: "飞线", value: "flyline" },
   { label: "热力", value: "heat" },
-  { label: "飞线", value: "flow" },
   { label: "3D", value: "3d" },
+];
+
+const regionKey = ref<"all" | "guangdong" | "guangzhou">("all");
+const regionOptions = [
+  { label: "全部", value: "all" },
+  { label: "广东", value: "guangdong" },
+  { label: "广州", value: "guangzhou" },
 ];
 
 let map: any;
 let markerList: any[] = [];
 let heatLayer: any = null;
 let barMarkerList: any[] = [];
-/** 飞线：原生 Polyline + CircleMarker，避免 Loca 与地图 WebGL 状态冲突 */
-let flowPolylineList: any[] = [];
-let flowHeadMarkers: any[] = [];
-let flowTracks: Array<{
-  track: [number, number][];
-  weight: number;
-  speed: number;
-  progress: number;
-  phase: number;
-}> = [];
-let flowAnimTimer: number | null = null;
+let flylineDots: any[] = [];
+let flylineRafId: number | null = null;
 
-const disposeFlowGraphics = () => {
-  if (flowAnimTimer) {
-    window.clearInterval(flowAnimTimer);
-    flowAnimTimer = null;
-  }
-  flowTracks = [];
-  flowPolylineList.forEach((p) => {
-    try {
-      p.setMap(null);
-    } catch {
-      /* ignore */
-    }
-  });
-  flowPolylineList = [];
-  flowHeadMarkers.forEach((m) => {
-    try {
-      m.setMap(null);
-    } catch {
-      /* ignore */
-    }
-  });
-  flowHeadMarkers = [];
-};
+interface FlylineRoute {
+  start: [number, number];
+  end: [number, number];
+  color: string;
+  coords: [number, number][];
+}
+let flylineRoutes: FlylineRoute[] = [];
 
-/** 粤桂两翼默认视野；无点位时回退 */
+/** 粤桂两翼默认视野 */
 const MAP_DEFAULT_CENTER: [number, number] = [112.97, 23.13];
 const MAP_DEFAULT_ZOOM = 6.8;
 
-/** 按当前堆场列表调整视野（省份筛选、首屏加载时调用） */
-const fitMapToYards = () => {
+/** 所有有效坐标的网点 */
+const validSites = () => (repairStore.sites || []).filter((s) => s.lng && s.lat);
+
+/** 按地区筛选后的网点 */
+const filteredSites = () => {
+  const sites = validSites();
+  if (regionKey.value === "guangdong") return sites.filter((s) => s.province === "广东");
+  if (regionKey.value === "guangzhou") return sites.filter((s) => s.city === "广州");
+  return sites;
+};
+
+const fitMapToSites = (sites: ReturnType<typeof filteredSites>) => {
   if (!map || !window.AMap) return;
-  const yards = yardStore.yards;
-  if (!yards.length) {
+  if (!sites.length) {
     map.setZoomAndCenter(MAP_DEFAULT_ZOOM, MAP_DEFAULT_CENTER, true, 500);
     return;
   }
-  if (yards.length === 1) {
-    const y = yards[0];
-    map.setZoomAndCenter(9, [y.lng, y.lat], true, 600);
+  if (sites.length === 1) {
+    map.setZoomAndCenter(9, [sites[0].lng, sites[0].lat], true, 600);
     return;
   }
-  const lngs = yards.map((y) => y.lng);
-  const lats = yards.map((y) => y.lat);
+  const lngs = sites.map((s) => s.lng);
+  const lats = sites.map((s) => s.lat);
   const sw = new window.AMap.LngLat(Math.min(...lngs), Math.min(...lats));
   const ne = new window.AMap.LngLat(Math.max(...lngs), Math.max(...lats));
   const bounds = new window.AMap.Bounds(sw, ne);
-  const padding = [100, 120, 120, 120];
   if (typeof map.setBounds === "function") {
-    map.setBounds(bounds, true, padding);
-    return;
-  }
-  if (typeof map.setFitView === "function") {
-    map.setFitView(markerList.filter(Boolean), false, padding, 14);
+    map.setBounds(bounds, true, [100, 120, 120, 120]);
   }
 };
 
-const redrawMarkers = async () => {
+const markerColor = (type: string) =>
+  type === "self" ? "#3b82f6" : "#f97316";
+
+const redrawMarkers = () => {
   if (!map) return;
   markerList.forEach((m) => m.setMap(null));
-  markerList = yardStore.yards.map((yard) => {
+  const sites = filteredSites();
+  markerList = sites.map((site) => {
+    const color = markerColor(site.company_type);
     const marker = new window.AMap.Marker({
-      position: [yard.lng, yard.lat],
-      title: yard.name,
-      content: `<div class="yard-marker ${yard.status}">${yard.name}</div>`,
+      position: [site.lng, site.lat],
+      title: site.name,
+      content: `<div class="site-marker" style="--color:${color}"><span>${site.name}</span></div>`,
     });
-    marker.on("click", () => selection.focusYard(yard.id, { openDrawer: true }));
     marker.on("mouseover", () => {
       const box = document.createElement("div");
       box.style.cssText =
         "padding:10px 14px;min-width:150px;max-width:260px;background:linear-gradient(180deg,rgba(12,40,78,0.98),rgba(4,18,40,0.98));border:1px solid rgba(80,220,255,0.55);border-radius:8px;box-shadow:0 6px 28px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);";
       const titleEl = document.createElement("div");
-      titleEl.style.cssText = "font-weight:700;color:#8cf8ff;font-size:13px;margin-bottom:6px;letter-spacing:0.3px;";
-      titleEl.textContent = yard.name;
+      titleEl.style.cssText = "font-weight:700;color:#8cf8ff;font-size:13px;margin-bottom:6px;";
+      titleEl.textContent = site.name;
       const subEl = document.createElement("div");
       subEl.style.cssText = "font-size:12px;color:#d6eef8;line-height:1.45;";
-      subEl.textContent = `容量 ${yard.capacity}`;
+      const typeLabel = site.company_type === "self" ? "自营" : "外包";
+      subEl.textContent = site.parent_name
+        ? `${typeLabel} · ${site.parent_name}`
+        : typeLabel;
       box.appendChild(titleEl);
       box.appendChild(subEl);
       const tip = new window.AMap.InfoWindow({
@@ -137,181 +131,208 @@ const redrawMarkers = async () => {
     marker.setMap(map);
     return marker;
   });
-  fitMapToYards();
-};
-
-const locateYard = (id: number | null) => {
-  if (!id || !map) return;
-  const yard =
-    yardStore.yards.find((item) => item.id === id) ||
-    yardStore.rankingItems.find((item: { id: number }) => item.id === id);
-  if (yard && typeof yard.lng === "number" && typeof yard.lat === "number") {
-    map.setZoomAndCenter(9, [yard.lng, yard.lat], true, 800);
-  }
-};
-
-const pulseAlert = (id: number | null) => {
-  if (!id) return;
-  const marker = markerList[yardStore.yards.findIndex((y) => y.id === id)];
-  if (marker) {
-    marker.setAnimation("AMAP_ANIMATION_BOUNCE");
-    setTimeout(() => marker.setAnimation(null), 1800);
-  }
+  fitMapToSites(sites);
 };
 
 const clearLayers = () => {
   heatLayer?.setMap(null);
   heatLayer = null;
-  disposeFlowGraphics();
-
   barMarkerList.forEach((item) => item.setMap(null));
   barMarkerList = [];
+  flylineDots.forEach((d) => d.setMap(null));
+  flylineDots = [];
+  flylineRoutes = [];
+  if (flylineRafId !== null) {
+    cancelAnimationFrame(flylineRafId);
+    flylineRafId = null;
+  }
+  const cv = flyCanvas.value;
+  if (cv) {
+    const ctx = cv.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
+  }
 };
 
 const renderHeat = () => {
-  heatLayer = new window.AMap.HeatMap(map, {
+  const sites = filteredSites();
+  if (!sites.length) return;
+  heatLayer = new window.AMap.HeatMap(map!, {
     radius: 28,
     opacity: [0.2, 0.9],
   });
   heatLayer.setDataSet({
-    data: yardStore.yards.map((y) => ({ lng: y.lng, lat: y.lat, count: y.capacity })),
-    max: Math.max(...yardStore.yards.map((x) => x.capacity), 100),
+    data: sites.map((s) => ({ lng: s.lng, lat: s.lat, count: 1 })),
+    max: 1,
   });
-};
-
-const renderFlow = () => {
-  disposeFlowGraphics();
-
-  if (!map) return;
-
-  const yardByCode = new Map(yardStore.yards.map((item) => [item.code, item]));
-  const validFlows = yardStore.odFlow
-    .map((flow) => {
-      const from = yardByCode.get(flow.from_code);
-      const to = yardByCode.get(flow.to_code);
-      if (!from || !to) return null;
-      return { from, to, value: flow.value };
-    })
-    .filter(Boolean);
-
-  if (!validFlows.length) return;
-
-  const minValue = Math.min(...validFlows.map((item: any) => item.value));
-  const maxValue = Math.max(...validFlows.map((item: any) => item.value));
-  const valueSpan = Math.max(1, maxValue - minValue);
-  const normalize = (value: number) => (value - minValue) / valueSpan;
-
-  const makeTrack = (from: any, to: any) => {
-    const midLng = (from.lng + to.lng) / 2;
-    const midLat = (from.lat + to.lat) / 2 + 0.35;
-    const points: [number, number][] = [];
-    for (let i = 0; i <= 80; i++) {
-      const t = i / 80;
-      const lng = (1 - t) * (1 - t) * from.lng + 2 * (1 - t) * t * midLng + t * t * to.lng;
-      const lat = (1 - t) * (1 - t) * from.lat + 2 * (1 - t) * t * midLat + t * t * to.lat;
-      points.push([lng, lat]);
-    }
-    return points;
-  };
-
-  validFlows.forEach((item: any) => {
-    const track = makeTrack(item.from, item.to);
-    const normalized = normalize(item.value);
-    const w = 1.8 + normalized * 3.8;
-    const speed = 0.85 + normalized * 2.2;
-    flowTracks.push({
-      track,
-      weight: w,
-      speed,
-      progress: Math.random() * track.length,
-      phase: Math.random() * Math.PI * 2,
-    });
-
-    const poly = new window.AMap.Polyline({
-      path: track,
-      strokeColor: `rgba(61,210,255,${0.45 + normalized * 0.35})`,
-      strokeWeight: Math.max(2, 2 + normalized * 5),
-      strokeOpacity: 0.92,
-      lineJoin: "round",
-      lineCap: "round",
-      zIndex: 52,
-    });
-    poly.setMap(map);
-    flowPolylineList.push(poly);
-  });
-
-  flowTracks.forEach((flow) => {
-    const idx = Math.floor(flow.progress) % flow.track.length;
-    const head = new window.AMap.CircleMarker({
-      center: flow.track[idx],
-      radius: Math.min(8, Math.max(3, flow.weight)),
-      strokeColor: "rgba(200,248,255,0.95)",
-      strokeWeight: 1,
-      fillColor: "#f0fdff",
-      fillOpacity: 0.95,
-      zIndex: 60,
-    });
-    head.setMap(map);
-    flowHeadMarkers.push(head);
-  });
-
-  flowAnimTimer = window.setInterval(() => {
-    flowTracks.forEach((flow, i) => {
-      flow.progress = (flow.progress + flow.speed) % flow.track.length;
-      const idx = Math.floor(flow.progress);
-      const pt = flow.track[idx];
-      const hm = flowHeadMarkers[i];
-      if (hm && typeof hm.setCenter === "function") {
-        hm.setCenter(pt);
-      }
-    });
-  }, 90);
 };
 
 const renderBar3D = () => {
-  barMarkerList = yardStore.yards.map((yard) => {
-    const barHeight = Math.max(20, Math.floor(yard.capacity / 180));
+  const sites = filteredSites();
+  if (!sites.length) return;
+  barMarkerList = sites.map((site) => {
+    const color = markerColor(site.company_type);
+    const barHeight = 40;
     const marker = new window.AMap.Marker({
-      position: [yard.lng, yard.lat],
+      position: [site.lng, site.lat],
       offset: new window.AMap.Pixel(-5, -barHeight),
-      content: `<div style="width:10px;height:${barHeight}px;background:linear-gradient(180deg,#6cf7ff,#1654ff);box-shadow:0 0 12px rgba(83,215,255,0.8);"></div>`,
+      content: `<div style="width:10px;height:${barHeight}px;background:linear-gradient(180deg,${color},rgba(0,0,0,0.6));box-shadow:0 0 12px ${color}88;"></div>`,
     });
     marker.setMap(map);
     return marker;
   });
 };
 
+/* ---------- 飞线：Canvas 叠加层 ---------- */
+
+const bezierCtrl = (s: [number, number], e: [number, number]): [number, number] => {
+  const dx = e[0] - s[0], dy = e[1] - s[1];
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d < 1e-6) return [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
+  const off = d * 0.25;
+  return [(s[0] + e[0]) / 2 + (-dy / d) * off, (s[1] + e[1]) / 2 + (dx / d) * off];
+};
+
+const bezierCoords = (s: [number, number], e: [number, number], seg = 30): [number, number][] => {
+  const [cx, cy] = bezierCtrl(s, e);
+  return Array.from({ length: seg + 1 }, (_, i) => {
+    const t = i / seg;
+    return [
+      (1 - t) * (1 - t) * s[0] + 2 * (1 - t) * t * cx + t * t * e[0],
+      (1 - t) * (1 - t) * s[1] + 2 * (1 - t) * t * cy + t * t * e[1],
+    ] as [number, number];
+  });
+};
+
+const drawFlylineCanvas = () => {
+  const cv = flyCanvas.value;
+  if (!cv || !map || !flylineRoutes.length) return;
+  const size = map.getSize();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size.width * dpr;
+  cv.height = size.height * dpr;
+  cv.style.width = size.width + "px";
+  cv.style.height = size.height + "px";
+  const ctx = cv.getContext("2d")!;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size.width, size.height);
+
+  for (const fl of flylineRoutes) {
+    const sp = map.lngLatToContainer(new window.AMap.LngLat(fl.start[0], fl.start[1]));
+    const ep = map.lngLatToContainer(new window.AMap.LngLat(fl.end[0], fl.end[1]));
+    const cp = bezierCtrl(
+      [sp.getX(), sp.getY()],
+      [ep.getX(), ep.getY()],
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(sp.getX(), sp.getY());
+    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
+    ctx.strokeStyle = fl.color + "30";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(sp.getX(), sp.getY());
+    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
+    ctx.strokeStyle = fl.color + "AA";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+};
+
+const renderFlylines = () => {
+  const sites = filteredSites();
+  if (!sites.length || !map) return;
+
+  const groups: Record<string, typeof sites> = {};
+  for (const s of sites) {
+    (groups[s.parent_name || "__none__"] ??= []).push(s);
+  }
+
+  flylineRoutes = [];
+  for (const children of Object.values(groups)) {
+    if (children.length < 2) continue;
+    const cx = children.reduce((a, c) => a + c.lng, 0) / children.length;
+    const cy = children.reduce((a, c) => a + c.lat, 0) / children.length;
+    if (!isFinite(cx) || !isFinite(cy)) continue;
+    for (const child of children) {
+      if (!isFinite(child.lng) || !isFinite(child.lat)) continue;
+      const color = markerColor(child.company_type);
+      const coords = bezierCoords([child.lng, child.lat], [cx, cy]);
+      flylineRoutes.push({ start: [child.lng, child.lat], end: [cx, cy], color, coords });
+    }
+  }
+
+  drawFlylineCanvas();
+
+  flylineDots = flylineRoutes.map((fl) => {
+    const dot = new window.AMap.Marker({
+      position: fl.start,
+      content: `<div style="width:5px;height:5px;border-radius:50%;background:${fl.color};box-shadow:0 0 6px ${fl.color},0 0 14px ${fl.color}66;"></div>`,
+      offset: new window.AMap.Pixel(-2.5, -2.5),
+    });
+    dot.setMap(map);
+    return dot;
+  });
+
+  const anims = flylineRoutes.map((fl, i) => ({
+    marker: flylineDots[i],
+    coords: fl.coords,
+    duration: 3000 + Math.random() * 2000,
+    startTime: performance.now() + Math.random() * 3000,
+  }));
+
+  const step = (now: number) => {
+    for (const a of anims) {
+      const t = (((now - a.startTime) % a.duration) + a.duration) % a.duration / a.duration;
+      const rawIdx = t * (a.coords.length - 1);
+      const idx = Math.min(Math.floor(rawIdx), a.coords.length - 2);
+      const frac = rawIdx - idx;
+      const lng = a.coords[idx][0] + (a.coords[idx + 1][0] - a.coords[idx][0]) * frac;
+      const lat = a.coords[idx][1] + (a.coords[idx + 1][1] - a.coords[idx][1]) * frac;
+      if (isFinite(lng) && isFinite(lat)) a.marker.setPosition([lng, lat]);
+    }
+    flylineRafId = requestAnimationFrame(step);
+  };
+  flylineRafId = requestAnimationFrame(step);
+};
+
 const renderLayer = (val: string) => {
   clearLayers();
-  markerList.forEach((m) => m.setMap(val === "point" ? map : null));
+  const showMarkers = val === "point" || val === "flyline";
+  markerList.forEach((m) => m.setMap(showMarkers ? map : null));
+  if (val === "flyline") renderFlylines();
   if (val === "heat") renderHeat();
-  if (val === "flow") renderFlow();
   if (val === "3d") renderBar3D();
+};
+
+const fullRedraw = () => {
+  redrawMarkers();
+  renderLayer(selection.layer);
 };
 
 onMounted(async () => {
   const AMap = await useAMapLoader();
   map = new AMap.Map(containerRef.value, {
-    center: [112.97, 23.13],
+    center: MAP_DEFAULT_CENTER,
     zoom: 7,
     viewMode: "3D",
     mapStyle: "amap://styles/darkblue",
     pitch: 40,
   });
-  await redrawMarkers();
-  renderLayer(selection.layer);
+  map.on("viewchange", () => {
+    if (flylineRoutes.length) drawFlylineCanvas();
+  });
+  fullRedraw();
 });
 
-watch(() => yardStore.yards, redrawMarkers, { deep: true });
-watch(yardId, locateYard);
-watch(alertPulseYardId, pulseAlert);
+watch(() => repairStore.sites, fullRedraw, { deep: true });
 watch(layer, (val) => renderLayer(val));
-watch(() => yardStore.odFlow, () => {
-  if (selection.layer === "flow") renderFlow();
-}, { deep: true });
+watch(regionKey, () => fullRedraw());
 
 onUnmounted(() => {
-  disposeFlowGraphics();
+  if (flylineRafId !== null) cancelAnimationFrame(flylineRafId);
   map?.destroy();
 });
 </script>
@@ -325,6 +346,21 @@ onUnmounted(() => {
 .map-core {
   width: 100%;
   height: 100%;
+}
+.flyline-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+.region-switch {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 10;
 }
 .layer-switch {
   position: absolute;

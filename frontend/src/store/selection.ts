@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-export type LayerType = "point" | "heat" | "flow" | "3d";
+export type LayerType = "point" | "flyline" | "heat" | "3d";
 
 export const useSelectionStore = defineStore("selection", () => {
   const province = ref<string | null>(null);

@@ -7,6 +7,11 @@ const router = createRouter({
   routes: [
     { path: "/", component: Cockpit },
     {
+      path: "/admin",
+      name: "Admin",
+      component: () => import("@/views/Admin.vue"),
+    },
+    {
       path: "/data-console",
       name: "DataConsole",
       component: () => import("@/views/DataConsole.vue"),
