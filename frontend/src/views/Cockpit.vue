@@ -3,64 +3,53 @@
     <div class="screen-scale" :style="{ transform: `scale(${scale})` }">
       <ScreenLayout>
         <template #left-top>
-          <PanelTitle title="关键指标" />
-          <KpiCards />
+          <div class="slot-col">
+            <PanelTitle title="每周修理量与修理收入" />
+            <div class="slot-body"><RepairKpiCards /></div>
+          </div>
         </template>
 
         <template #left-mid>
-          <PanelTitle title="点位容量排名" />
-          <RankingBarChart />
+          <div class="slot-col">
+            <PanelTitle title="客户类型占比" />
+            <div class="slot-body"><CustomerPieChart /></div>
+          </div>
         </template>
 
         <template #left-bottom>
-          <PanelTitle title="7日吞吐趋势" />
-          <TrendLineChart />
+          <div class="slot-col">
+            <PanelTitle title="累计修理排名" />
+            <div class="slot-body"><CumulativeRankChart /></div>
+          </div>
         </template>
 
         <template #center>
-          <div class="toolbar">
-            <el-select
-              v-model="selection.province"
-              class="province-select"
-              :placeholder="provinceOptions.length ? '筛选省份' : '请先在系统管理维护省份'"
-              clearable
-              teleported
-              popper-class="cockpit-province-popper"
-            >
-              <el-option
-                v-for="p in provinceOptions"
-                :key="p.code"
-                :label="p.label"
-                :value="p.code"
-              />
-            </el-select>
-            <el-button class="console-link" type="primary" link @click="goSystemAdmin">系统管理</el-button>
-            <el-button class="console-link" type="primary" link @click="goDataConsole">数据管理</el-button>
+          <div v-if="showAdmin" class="toolbar">
+            <el-button class="console-link" type="primary" link @click="goAdmin">系统管理</el-button>
+            <el-button class="console-link" type="primary" link @click="goAdmin">数据管理</el-button>
           </div>
           <MapCore />
-          <YardDrawer />
         </template>
 
         <template #right-top>
-          <PanelTitle title="货种结构分布" />
-          <CargoPieChart />
-        </template>
-
-        <template #right-mid>
-          <PanelTitle title="堆场状态占比" />
-          <StatusGaugeChart />
+          <div class="slot-col">
+            <PanelTitle title="自营/外包网点排名" />
+            <div class="slot-body"><RepairOrgRanking /></div>
+          </div>
         </template>
 
         <template #right-bottom>
-          <PanelTitle title="实时预警" />
-          <AlertScrollBoard />
+          <div class="slot-col">
+            <PanelTitle title="网点明细" />
+            <div class="slot-body"><RepairSiteDrilldown /></div>
+          </div>
         </template>
 
         <template #footer>
           <div class="cockpit-footer-inner">
-            <PanelTitle title="TOP10 物流点位明细" />
+            <PanelTitle title="修理业务机构排名" />
             <div class="cockpit-footer-table">
-              <YardTable />
+              <RepairOrgTable />
             </div>
           </div>
         </template>
@@ -70,85 +59,36 @@
 </template>
 
 <script setup lang="ts">
-import { ElButton, ElOption, ElSelect } from "element-plus";
-import { computed, onMounted, onUnmounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { ElButton } from "element-plus";
+import { computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-import CargoPieChart from "@/components/charts/CargoPieChart.vue";
-import RankingBarChart from "@/components/charts/RankingBarChart.vue";
-import StatusGaugeChart from "@/components/charts/StatusGaugeChart.vue";
-import TrendLineChart from "@/components/charts/TrendLineChart.vue";
+import CustomerPieChart from "@/components/charts/CustomerPieChart.vue";
+import RepairOrgRanking from "@/components/charts/RepairOrgRanking.vue";
+import RepairSiteDrilldown from "@/components/charts/RepairSiteDrilldown.vue";
 import PanelTitle from "@/components/decorations/PanelTitle.vue";
 import MapCore from "@/components/map/MapCore.vue";
-import YardDrawer from "@/components/map/YardDrawer.vue";
-import KpiCards from "@/components/kpi/KpiCards.vue";
-import AlertScrollBoard from "@/components/tables/AlertScrollBoard.vue";
-import YardTable from "@/components/tables/YardTable.vue";
+import RepairKpiCards from "@/components/kpi/RepairKpiCards.vue";
+import CumulativeRankChart from "@/components/charts/CumulativeRankChart.vue";
+import RepairOrgTable from "@/components/tables/RepairOrgTable.vue";
 import { useScreenAdapter } from "@/composables/useScreenAdapter";
-import { useWS } from "@/composables/useWS";
 import ScreenLayout from "@/layouts/ScreenLayout.vue";
-import { useDictStore } from "@/store/dict";
-import { useSelectionStore } from "@/store/selection";
-import { useYardStore } from "@/store/yard";
+import { useRepairStore } from "@/store/repair";
 
 const { scale } = useScreenAdapter();
-const store = useYardStore();
-const selection = useSelectionStore();
-const dict = useDictStore();
+const repairStore = useRepairStore();
 const router = useRouter();
+const route = useRoute();
 
-const provinceOptions = computed(() => dict.provinces);
+const showAdmin = computed(() => route.query.admin === "true");
 
-function goDataConsole() {
-  void router.push({ name: "DataConsole" });
+function goAdmin() {
+  void router.push("/admin");
 }
-
-function goSystemAdmin() {
-  void router.push({ name: "SystemAdmin" });
-}
-
-useWS();
 
 onMounted(() => {
-  void dict.ensure("province");
-  store.loadAll();
+  repairStore.loadAll();
 });
-
-let idleTimer: number | null = null;
-let idleRound = 0;
-const idleEvents = ["mousemove", "keydown", "wheel"];
-const resetIdlePatrol = () => {
-  if (idleTimer) window.clearInterval(idleTimer);
-  idleTimer = window.setInterval(() => {
-    if (!store.rankingItems.length) return;
-    const target = store.rankingItems[idleRound % store.rankingItems.length];
-    selection.focusYard(target.id);
-    idleRound += 1;
-  }, 5000);
-};
-
-const bindIdlePatrol = () => {
-  idleEvents.forEach((eventName) => {
-    window.addEventListener(eventName, resetIdlePatrol);
-  });
-  resetIdlePatrol();
-};
-
-onMounted(bindIdlePatrol);
-onUnmounted(() => {
-  if (idleTimer) window.clearInterval(idleTimer);
-  idleEvents.forEach((eventName) => {
-    window.removeEventListener(eventName, resetIdlePatrol);
-  });
-});
-
-watch(
-  () => selection.province,
-  (val) => {
-    selection.focusYard(null);
-    store.loadAll(val);
-  },
-);
 </script>
 
 <style scoped lang="scss">
@@ -191,6 +131,17 @@ watch(
   min-height: 0;
 }
 .cockpit-footer-table {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slot-col {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.slot-body {
   flex: 1;
   min-height: 0;
   overflow: hidden;

@@ -14,5 +14,8 @@ class Settings(BaseSettings):
     )
     redis_url: str = "redis://localhost:6379/0"
 
+    amap_key: str = ""
+    amap_security: str = ""
+
 
 settings = Settings()

@@ -1,12 +1,12 @@
 <template>
   <div class="data-console">
-    <header class="top">
+    <header v-if="!embedded" class="top">
       <div>
         <h1>PostgreSQL 数据管理台</h1>
         <p class="sub">维护驾驶舱用到的库表：查看明细、单条录入、CSV 批量导入（UTF-8，可用 Excel 另存为 CSV）</p>
       </div>
       <div class="actions">
-        <el-button type="primary" link @click="router.push({ name: 'SystemAdmin' })">系统管理</el-button>
+        <el-button type="primary" link @click="router.push('/admin')">系统管理</el-button>
         <el-button type="primary" link @click="router.push('/')">返回驾驶舱</el-button>
       </div>
     </header>
@@ -175,6 +175,94 @@
             </template>
           </el-table-column>
         </el-table>
+      </el-tab-pane>
+
+      <!-- 周报 Excel 导入 -->
+      <el-tab-pane label="周报 Excel 导入" name="excel-import">
+        <!-- 第一步：上传预览 -->
+        <div v-if="!sheetPreview" class="toolbar">
+          <el-form :inline="true">
+            <el-form-item label="年份">
+              <el-input-number v-model="excelYear" :min="2020" :max="2030" :step="1" />
+            </el-form-item>
+            <el-form-item label="周次">
+              <el-input-number v-model="excelWeek" :min="1" :max="53" :step="1" />
+            </el-form-item>
+            <el-form-item>
+              <el-upload
+                :show-file-list="false"
+                accept=".xlsx,.xls"
+                :before-upload="previewExcel"
+              >
+                <el-button type="primary" :loading="previewLoading">上传 Excel 预览</el-button>
+              </el-upload>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 第二步：Sheet 映射确认 -->
+        <div v-if="sheetPreview" class="sheet-preview">
+          <div class="toolbar">
+            <span class="meta">{{ sheetPreview.filename }} — 检测到 {{ sheetPreview.sheets.length }} 个 Sheet</span>
+            <el-button @click="resetPreview">取消</el-button>
+            <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+          </div>
+          <el-table :data="sheetPreview.sheets" stripe border max-height="50vh">
+            <el-table-column prop="name" label="Sheet 名称" min-width="200" />
+            <el-table-column label="检测年份" width="120">
+              <template #default="{ row }">{{ row.detected_year ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="检测周次" width="120">
+              <template #default="{ row }">{{ row.detected_week ?? '—' }}</template>
+            </el-table-column>
+            <el-table-column label="角色" width="180">
+              <template #default="{ row }">
+                <el-select v-model="row.role" style="width: 100%" teleported popper-class="console-select-popper">
+                  <el-option label="当前周数据" value="current" />
+                  <el-option label="同比对照" value="yoy" />
+                  <el-option label="网点明细" value="inspection" />
+                  <el-option label="经营单位" value="network" />
+                  <el-option label="累计完成" value="cumulative" />
+                  <el-option label="忽略" value="ignore" />
+                </el-select>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div v-if="excelResult" class="excel-result">
+          <p>导入成功！</p>
+          <p>年份: {{ excelResult.year }}，周次: {{ excelResult.week }}</p>
+          <ul>
+            <li v-for="(count, key) in excelResult.row_counts" :key="key">
+              {{ key }}: {{ count }} 条
+            </li>
+          </ul>
+        </div>
+        <div v-if="excelError" class="excel-error">
+          <p>导入失败: {{ excelError }}</p>
+        </div>
+      </el-tab-pane>
+
+      <!-- 网点坐标解析 -->
+      <el-tab-pane label="网点坐标" name="site-geocode">
+        <div class="toolbar">
+          <el-button type="primary" :loading="geocodeBusy" @click="batchGeocodeSites">
+            批量解析缺失坐标
+          </el-button>
+          <el-button type="warning" :loading="validateBusy" @click="validateAllCoords">
+            校验全部坐标
+          </el-button>
+          <span class="meta">解析/校验网点坐标（高德 JS SDK）</span>
+        </div>
+        <div v-if="geocodeProgress" class="geocode-progress">{{ geocodeProgress }}</div>
+        <div v-if="geocodeWarnings.length" class="geocode-warnings">
+          <p><strong>警告 ({{ geocodeWarnings.length }} 条):</strong></p>
+          <ul>
+            <li v-for="(w, i) in geocodeWarnings.slice(0, 30)" :key="i">{{ w }}</li>
+            <li v-if="geocodeWarnings.length > 30">... 还有 {{ geocodeWarnings.length - 30 }} 条</li>
+          </ul>
+        </div>
       </el-tab-pane>
     </el-tabs>
 
@@ -355,13 +443,245 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { dataConsole } from "@/api/dataConsole";
+import {
+  getNetworkSites,
+  batchUpdateSiteCoords,
+  previewExcelSheets,
+  uploadWeeklyExcel,
+} from "@/api/repairDashboard";
+import type { SheetInfo } from "@/api/repairDashboard";
 import { geocodeAddress } from "@/composables/useGeocoder";
 import { useDictStore } from "@/store/dict";
+
+const props = defineProps<{ embedded?: boolean }>();
 
 const router = useRouter();
 const dict = useDictStore();
 const active = ref("yards");
 const importHelp = ref<Record<string, string>>({});
+
+const excelYear = ref(2026);
+const excelWeek = ref(20);
+const excelResult = ref<any>(null);
+const excelError = ref<string | null>(null);
+const previewLoading = ref(false);
+const importLoading = ref(false);
+const sheetPreview = ref<{ filename: string; sheets: (SheetInfo & { role: string })[] } | null>(null);
+const pendingFile = ref<File | null>(null);
+
+const geocodeBusy = ref(false);
+const geocodeProgress = ref("");
+const geocodeWarnings = ref<string[]>([]);
+const validateBusy = ref(false);
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+function inferHintCity(site: any): string | undefined {
+  if (site.city) return site.city;
+  const text = `${site.parent_name || ""} ${site.name || ""}`;
+  const cityMap: Record<string, string> = {
+    广州: "广州", 深圳: "深圳", 佛山: "佛山", 东莞: "东莞", 中山: "中山",
+    珠海: "珠海", 江门: "江门", 肇庆: "肇庆", 惠州: "惠州", 汕头: "汕头",
+    湛江: "湛江", 茂名: "茂名", 阳江: "阳江", 清远: "清远", 云浮: "云浮",
+    揭阳: "揭阳", 韶关: "韶关", 梅州: "梅州", 河源: "河源", 汕尾: "汕尾",
+    潮州: "潮州", 南宁: "南宁", 柳州: "柳州", 桂林: "桂林", 梧州: "梧州",
+    北海: "北海", 钦州: "钦州", 防城港: "防城港", 贵港: "贵港", 玉林: "玉林",
+    百色: "百色", 贺州: "贺州", 河池: "河池", 来宾: "来宾", 崇左: "崇左",
+    贵阳: "贵阳", 遵义: "遵义", 昆明: "昆明", 泉州: "泉州",
+    南沙: "广州", 黄埔: "广州", 花都: "广州", 增城: "广州", 番禺: "广州",
+    白云: "广州", 天河: "广州", 海珠: "广州", 荔湾: "广州", 越秀: "广州",
+    从化: "广州", 萝岗: "广州", 南沙区: "广州", 黄埔区: "广州",
+    三水: "佛山", 高明: "佛山", 顺德: "佛山", 南海: "佛山", 禅城: "佛山",
+    虎门: "东莞", 长安: "东莞", 厚街: "东莞", 沙田: "东莞", 麻涌: "东莞",
+    石龙: "东莞", 寮步: "东莞", 常平: "东莞", 塘厦: "东莞",
+    新会: "江门", 鹤山: "江门", 台山: "江门", 开平: "江门", 恩平: "江门",
+    四会: "肇庆", 高要: "肇庆", 广宁: "肇庆", 德庆: "肇庆", 封开: "肇庆", 怀集: "肇庆",
+    博罗: "惠州", 惠阳: "惠州", 惠东: "惠州", 龙门: "惠州",
+    阳春: "阳江", 阳西: "阳江", 阳东: "阳江",
+    英德: "清远", 连州: "清远", 佛冈: "清远", 阳山: "清远", 连南: "清远", 连山: "清远",
+    罗定: "云浮", 新兴: "云浮", 郁南: "云浮", 云安: "云浮",
+    普宁: "揭阳", 揭东: "揭阳", 揭西: "揭阳", 惠来: "揭阳",
+    澄海: "汕头", 潮阳: "汕头", 潮南: "汕头", 南澳: "汕头",
+    廉江: "湛江", 雷州: "湛江", 吴川: "湛江", 遂溪: "湛江", 徐闻: "湛江",
+    高州: "茂名", 化州: "茂名", 信宜: "茂名", 电白: "茂名",
+    陆丰: "汕尾", 海丰: "汕尾", 陆河: "汕尾",
+    乐昌: "韶关", 南雄: "韶关", 仁化: "韶关", 始兴: "韶关", 翁源: "韶关", 新丰: "韶关", 乳源: "韶关",
+    兴宁: "梅州", 梅县: "梅州", 平远: "梅州", 蕉岭: "梅州", 大埔: "梅州", 丰顺: "梅州", 五华: "梅州",
+    紫金: "河源", 龙川: "河源", 连平: "河源", 和平: "河源", 东源: "河源",
+    饶平: "潮州", 潮安: "潮州",
+    武宣: "来宾", 象州: "来宾", 忻城: "来宾", 金秀: "来宾", 合山: "来宾",
+    桂平: "贵港", 平南: "贵港",
+    北流: "玉林", 容县: "玉林", 陆川: "玉林", 博白: "玉林", 兴业: "玉林",
+    岑溪: "梧州", 藤县: "梧州", 蒙山: "梧州", 苍梧: "梧州",
+    灵山: "钦州", 浦北: "钦州",
+    上思: "防城港", 东兴: "防城港",
+    横州: "南宁", 宾阳: "南宁", 上林: "南宁", 马山: "南宁", 隆安: "南宁",
+    柳城: "柳州", 鹿寨: "柳州", 融安: "柳州", 融水: "柳州", 三江: "柳州",
+    阳朔: "桂林", 灵川: "桂林", 全州: "桂林", 兴安: "桂林", 永福: "桂林", 灌阳: "桂林", 龙胜: "桂林", 资源: "桂林", 平乐: "桂林", 恭城: "桂林", 荔浦: "桂林",
+    合浦: "北海", 铁山港: "北海",
+    田阳: "百色", 田东: "百色", 平果: "百色", 德保: "百色", 靖西: "百色", 那坡: "百色", 凌云: "百色", 乐业: "百色", 田林: "百色", 西林: "百色", 隆林: "百色",
+    昭平: "贺州", 钟山: "贺州", 富川: "贺州",
+    宜州: "河池", 罗城: "河池", 环江: "河池", 南丹: "河池", 天峨: "河池", 凤山: "河池", 东兰: "河池", 巴马: "河池", 都安: "河池", 大化: "河池",
+    凭祥: "崇左", 扶绥: "崇左", 宁明: "崇左", 龙州: "崇左", 大新: "崇左", 天等: "崇左",
+  };
+  for (const [key, city] of Object.entries(cityMap)) {
+    if (text.includes(key)) return city;
+  }
+  return undefined;
+}
+
+function checkGeoMismatch(site: any, geo: any): string | null {
+  const expectCity = inferHintCity(site);
+  if (!expectCity) return null;
+  if (!geo.city) return null;
+  const actualCity = geo.city.replace(/市$/, "");
+  const ok = actualCity === expectCity || expectCity.includes(actualCity) || actualCity.includes(expectCity);
+  if (!ok) {
+    return `${site.code}: 解析到 ${geo.province || ""}${geo.city} (${geo.lng}, ${geo.lat})，与期望城市 ${expectCity} 不符`;
+  }
+  return null;
+}
+
+async function batchGeocodeSites() {
+  geocodeBusy.value = true;
+  geocodeProgress.value = "";
+  geocodeWarnings.value = [];
+  try {
+    const sites = await getNetworkSites();
+    const missing = sites.filter((s: any) => !s.lng || !s.lat);
+    if (!missing.length) {
+      geocodeProgress.value = "所有网点已有坐标，无需解析。";
+      return;
+    }
+    geocodeProgress.value = `共 ${missing.length} 个网点待解析...`;
+    const results: Array<{ code: string; lng: number; lat: number; province?: string; city?: string }> = [];
+    let done = 0;
+    for (const site of missing) {
+      const address = `${site.parent_name} ${site.name}`;
+      const hintCity = inferHintCity(site);
+      try {
+        const geo = await withTimeout(geocodeAddress(address, hintCity), 3000);
+        if (geo) {
+          const warn = checkGeoMismatch(site, geo);
+          if (warn) geocodeWarnings.value.push(warn);
+          results.push({ code: site.code, lng: geo.lng, lat: geo.lat, province: geo.province, city: geo.city });
+        }
+      } catch {
+        // skip failed geocode
+      }
+      done++;
+      geocodeProgress.value = `解析中 ${done}/${missing.length}（成功 ${results.length}）`;
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    if (results.length) {
+      await batchUpdateSiteCoords(results);
+    }
+    geocodeProgress.value = `完成！成功解析 ${results.length}/${missing.length} 个网点坐标。`;
+    if (geocodeWarnings.value.length) {
+      geocodeProgress.value += ` 警告 ${geocodeWarnings.value.length} 条，请下方查看。`;
+    }
+    ElMessage.success(`已回写 ${results.length} 个网点坐标`);
+  } catch (e: any) {
+    geocodeProgress.value = `失败: ${e.message}`;
+    ElMessage.error("批量解析失败");
+  } finally {
+    geocodeBusy.value = false;
+  }
+}
+
+async function validateAllCoords() {
+  validateBusy.value = true;
+  geocodeProgress.value = "";
+  geocodeWarnings.value = [];
+  try {
+    const sites = await getNetworkSites();
+    geocodeProgress.value = `共 ${sites.length} 个网点待校验...`;
+    let done = 0;
+    for (const site of sites) {
+      const address = `${site.parent_name} ${site.name}`;
+      const hintCity = inferHintCity(site);
+      try {
+        const geo = await withTimeout(geocodeAddress(address, hintCity), 3000);
+        if (geo) {
+          const warn = checkGeoMismatch(site, geo);
+          if (warn) geocodeWarnings.value.push(warn);
+        }
+      } catch {
+        // skip failed
+      }
+      done++;
+      if (done % 10 === 0) {
+        geocodeProgress.value = `校验中 ${done}/${sites.length}（警告 ${geocodeWarnings.value.length}）`;
+      }
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    geocodeProgress.value = `完成！共校验 ${sites.length} 个网点，发现 ${geocodeWarnings.value.length} 条警告。`;
+    if (!geocodeWarnings.value.length) {
+      ElMessage.success("所有网点坐标校验通过");
+    } else {
+      ElMessage.warning(`发现 ${geocodeWarnings.value.length} 个坐标可能不匹配`);
+    }
+  } catch (e: any) {
+    geocodeProgress.value = `失败: ${e.message}`;
+    ElMessage.error("校验失败");
+  } finally {
+    validateBusy.value = false;
+  }
+}
+
+async function previewExcel(file: File) {
+  excelResult.value = null;
+  excelError.value = null;
+  previewLoading.value = true;
+  try {
+    const res = await previewExcelSheets(file, excelYear.value, excelWeek.value);
+    pendingFile.value = file;
+    sheetPreview.value = {
+      filename: res.filename,
+      sheets: res.sheets.map((s) => ({ ...s, role: s.suggested_role ?? "ignore" })),
+    };
+  } catch (e: any) {
+    excelError.value = e?.response?.data?.detail || e?.message || "预览失败";
+    ElMessage.error(excelError.value);
+  } finally {
+    previewLoading.value = false;
+  }
+  return false;
+}
+
+function resetPreview() {
+  sheetPreview.value = null;
+  pendingFile.value = null;
+}
+
+async function confirmImport() {
+  if (!sheetPreview.value || !pendingFile.value) return;
+  const yoySheet = sheetPreview.value.sheets.find((s) => s.role === "yoy");
+  importLoading.value = true;
+  excelError.value = null;
+  try {
+    const res = await uploadWeeklyExcel(
+      pendingFile.value,
+      excelYear.value,
+      excelWeek.value,
+      yoySheet?.name,
+    );
+    excelResult.value = res;
+    sheetPreview.value = null;
+    pendingFile.value = null;
+    ElMessage.success("Excel 周报导入成功");
+  } catch (e: any) {
+    excelError.value = e?.response?.data?.detail || e?.message || "导入失败";
+    ElMessage.error(excelError.value);
+  } finally {
+    importLoading.value = false;
+  }
+}
 
 watch(active, (n) => {
   if (n === "yards") loadYards();
@@ -1114,6 +1434,61 @@ async function importVehCsv(file: File) {
   width: 100%;
   .el-input {
     flex: 1;
+  }
+}
+
+.excel-result {
+  padding: 16px;
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  border-radius: 6px;
+  color: #2ecc71;
+  p { margin: 4px 0; }
+  ul { padding-left: 20px; }
+  li { margin: 2px 0; }
+}
+.excel-error {
+  padding: 16px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+  color: #e74c3c;
+}
+
+.sheet-preview {
+  margin-bottom: 12px;
+}
+
+.geocode-progress {
+  margin: 8px 0;
+  padding: 10px 14px;
+  background: rgba(16, 62, 108, 0.6);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #b8e6ff;
+}
+
+.geocode-warnings {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 160, 0, 0.08);
+  border: 1px solid rgba(255, 160, 0, 0.25);
+  border-radius: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+
+  p {
+    margin: 0 0 8px;
+    color: #ffb74d;
+    font-size: 13px;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: #ffcc80;
+    line-height: 1.7;
   }
 }
 
