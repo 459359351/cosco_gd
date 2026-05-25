@@ -1,12 +1,12 @@
 <template>
   <div class="system-admin">
-    <header class="top">
+    <header v-if="!embedded" class="top">
       <div>
         <h1>系统管理</h1>
         <p class="sub">维护省份、城市、堆场状态、货种、预警类型、车辆状态等基础字典，驾驶舱与数据管理台将自动引用</p>
       </div>
       <div class="actions">
-        <el-button type="primary" link @click="router.push({ name: 'DataConsole' })">数据管理</el-button>
+        <el-button type="primary" link @click="router.push('/admin')">数据管理</el-button>
         <el-button type="primary" link @click="router.push('/')">返回驾驶舱</el-button>
       </div>
     </header>
@@ -86,6 +86,8 @@ import { useRouter } from "vue-router";
 
 import { sysDictApi, type DictTypeMeta, type SysDictRow } from "@/api/sysDict";
 import { useDictStore } from "@/store/dict";
+
+const props = defineProps<{ embedded?: boolean }>();
 
 const router = useRouter();
 const dict = useDictStore();

@@ -4,7 +4,6 @@
       <div class="title">集装箱修理业务驾驶舱</div>
       <div class="meta">
         <span>{{ now }}</span>
-        <span class="dot" :class="{ online: realtime.connected }"></span>
       </div>
     </header>
 
@@ -25,9 +24,6 @@
 import { useNow } from "@vueuse/core";
 import { computed } from "vue";
 
-import { useRealtimeStore } from "@/store/realtime";
-
-const realtime = useRealtimeStore();
 const nowRef = useNow({ interval: 1000 });
 const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 </script>
@@ -37,8 +33,8 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   position: relative;
   display: grid;
   grid-template-columns: 420px 1fr 420px;
-  grid-template-rows: 88px 1fr 1fr 1fr 220px;
-  gap: 12px;
+  grid-template-rows: 88px 260px 210px 1fr 125px;
+  gap: 10px;
   width: 1920px;
   height: 1080px;
   &::after {
@@ -79,16 +75,6 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   display: flex;
   gap: 14px;
   align-items: center;
-}
-.dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #7f8c9a;
-}
-.dot.online {
-  background: #24f0a9;
-  box-shadow: 0 0 10px #24f0a9;
 }
 .left-top {
   grid-column: 1;

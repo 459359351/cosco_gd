@@ -88,22 +88,22 @@ function formatPct(n: number) {
 .kpi-cards {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: 4px;
+  padding: 6px 8px;
   height: 100%;
-  overflow: auto;
+  justify-content: center;
 }
 .kpi-card {
-  padding: 10px 12px;
+  padding: 5px 10px;
   border: 1px solid rgba(57, 216, 255, 0.35);
   border-left: 3px solid;
   background: linear-gradient(180deg, rgba(8, 28, 56, 0.88), rgba(4, 14, 28, 0.88));
   border-radius: 6px;
 }
 .kpi-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 .kpi-row {
   display: flex;
@@ -114,21 +114,21 @@ function formatPct(n: number) {
 }
 .kpi-label {
   color: rgba(168, 201, 255, 0.7);
-  font-size: 11px;
+  font-size: 10px;
 }
 .kpi-value {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   color: #e0f0ff;
-  margin: 0 4px;
+  margin: 0 3px;
 }
 .kpi-unit {
   color: rgba(168, 201, 255, 0.5);
-  font-size: 11px;
+  font-size: 10px;
 }
 .kpi-change {
-  font-size: 11px;
-  margin-left: 6px;
+  font-size: 10px;
+  margin-left: 4px;
   &.up {
     color: #2ecc71;
   }
@@ -137,8 +137,8 @@ function formatPct(n: number) {
   }
 }
 .kpi-yoy {
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 10px;
   color: rgba(168, 201, 255, 0.6);
 }
 </style>

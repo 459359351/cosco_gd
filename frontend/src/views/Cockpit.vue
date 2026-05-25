@@ -3,36 +3,46 @@
     <div class="screen-scale" :style="{ transform: `scale(${scale})` }">
       <ScreenLayout>
         <template #left-top>
-          <PanelTitle title="每周修理量与修理收入" />
-          <RepairKpiCards />
+          <div class="slot-col">
+            <PanelTitle title="每周修理量与修理收入" />
+            <div class="slot-body"><RepairKpiCards /></div>
+          </div>
         </template>
 
         <template #left-mid>
-          <PanelTitle title="自营/外包网点排名" />
-          <RepairOrgRanking />
+          <div class="slot-col">
+            <PanelTitle title="客户类型占比" />
+            <div class="slot-body"><CustomerPieChart /></div>
+          </div>
         </template>
 
         <template #left-bottom>
-          <PanelTitle title="网点明细" />
-          <RepairSiteDrilldown />
+          <div class="slot-col">
+            <PanelTitle title="累计修理排名" />
+            <div class="slot-body"><CumulativeRankChart /></div>
+          </div>
         </template>
 
         <template #center>
-          <div class="toolbar">
-            <el-button class="console-link" type="primary" link @click="goSystemAdmin">系统管理</el-button>
-            <el-button class="console-link" type="primary" link @click="goDataConsole">数据管理</el-button>
+          <div v-if="showAdmin" class="toolbar">
+            <el-button class="console-link" type="primary" link @click="goAdmin">系统管理</el-button>
+            <el-button class="console-link" type="primary" link @click="goAdmin">数据管理</el-button>
           </div>
           <MapCore />
         </template>
 
         <template #right-top>
-          <PanelTitle title="客户类型占比" />
-          <CustomerPieChart />
+          <div class="slot-col">
+            <PanelTitle title="自营/外包网点排名" />
+            <div class="slot-body"><RepairOrgRanking /></div>
+          </div>
         </template>
 
         <template #right-bottom>
-          <PanelTitle title="实时预警" />
-          <AlertScrollBoard />
+          <div class="slot-col">
+            <PanelTitle title="网点明细" />
+            <div class="slot-body"><RepairSiteDrilldown /></div>
+          </div>
         </template>
 
         <template #footer>
@@ -50,8 +60,8 @@
 
 <script setup lang="ts">
 import { ElButton } from "element-plus";
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import CustomerPieChart from "@/components/charts/CustomerPieChart.vue";
 import RepairOrgRanking from "@/components/charts/RepairOrgRanking.vue";
@@ -59,26 +69,22 @@ import RepairSiteDrilldown from "@/components/charts/RepairSiteDrilldown.vue";
 import PanelTitle from "@/components/decorations/PanelTitle.vue";
 import MapCore from "@/components/map/MapCore.vue";
 import RepairKpiCards from "@/components/kpi/RepairKpiCards.vue";
-import AlertScrollBoard from "@/components/tables/AlertScrollBoard.vue";
+import CumulativeRankChart from "@/components/charts/CumulativeRankChart.vue";
 import RepairOrgTable from "@/components/tables/RepairOrgTable.vue";
 import { useScreenAdapter } from "@/composables/useScreenAdapter";
-import { useWS } from "@/composables/useWS";
 import ScreenLayout from "@/layouts/ScreenLayout.vue";
 import { useRepairStore } from "@/store/repair";
 
 const { scale } = useScreenAdapter();
 const repairStore = useRepairStore();
 const router = useRouter();
+const route = useRoute();
 
-function goDataConsole() {
-  void router.push({ name: "DataConsole" });
+const showAdmin = computed(() => route.query.admin === "true");
+
+function goAdmin() {
+  void router.push("/admin");
 }
-
-function goSystemAdmin() {
-  void router.push({ name: "SystemAdmin" });
-}
-
-useWS();
 
 onMounted(() => {
   repairStore.loadAll();
@@ -125,6 +131,17 @@ onMounted(() => {
   min-height: 0;
 }
 .cockpit-footer-table {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slot-col {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.slot-body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
