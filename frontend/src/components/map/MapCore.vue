@@ -1,18 +1,26 @@
 <template>
   <div class="map-wrap">
     <div ref="containerRef" class="map-core"></div>
-    <canvas ref="flyCanvas" class="flyline-canvas"></canvas>
     <div class="region-switch">
-      <el-segmented v-model="regionKey" :options="regionOptions" />
+      <button
+        v-for="opt in regionOptions"
+        :key="opt.value"
+        :class="{ active: regionKey === opt.value }"
+        @click="regionKey = opt.value as any"
+      >{{ opt.label }}</button>
     </div>
     <div class="layer-switch">
-      <el-segmented v-model="selection.layer" :options="layerOptions" />
+      <button
+        v-for="opt in layerOptions"
+        :key="opt.value"
+        :class="{ active: selection.layer === opt.value }"
+        @click="selection.layer = opt.value"
+      >{{ opt.label }}</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ElSegmented } from "element-plus";
 import { storeToRefs } from "pinia";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -21,51 +29,36 @@ import { useRepairStore } from "@/store/repair";
 import { useSelectionStore } from "@/store/selection";
 
 const containerRef = ref<HTMLElement | null>(null);
-const flyCanvas = ref<HTMLCanvasElement | null>(null);
 const repairStore = useRepairStore();
 const selection = useSelectionStore();
 const { layer } = storeToRefs(selection);
 const layerOptions = [
   { label: "散点", value: "point" },
-  { label: "飞线", value: "flyline" },
   { label: "热力", value: "heat" },
   { label: "3D", value: "3d" },
 ];
 
-const regionKey = ref<"all" | "guangdong" | "guangzhou">("all");
+const regionKey = ref<"all" | "guangdong" | "guangxi">("all");
 const regionOptions = [
   { label: "全部", value: "all" },
   { label: "广东", value: "guangdong" },
-  { label: "广州", value: "guangzhou" },
+  { label: "广西", value: "guangxi" },
 ];
 
 let map: any;
 let markerList: any[] = [];
 let heatLayer: any = null;
 let barMarkerList: any[] = [];
-let flylineDots: any[] = [];
-let flylineRafId: number | null = null;
 
-interface FlylineRoute {
-  start: [number, number];
-  end: [number, number];
-  color: string;
-  coords: [number, number][];
-}
-let flylineRoutes: FlylineRoute[] = [];
-
-/** 粤桂两翼默认视野 */
 const MAP_DEFAULT_CENTER: [number, number] = [112.97, 23.13];
 const MAP_DEFAULT_ZOOM = 6.8;
 
-/** 所有有效坐标的网点 */
 const validSites = () => (repairStore.sites || []).filter((s) => s.lng && s.lat);
 
-/** 按地区筛选后的网点 */
 const filteredSites = () => {
   const sites = validSites();
   if (regionKey.value === "guangdong") return sites.filter((s) => s.province === "广东");
-  if (regionKey.value === "guangzhou") return sites.filter((s) => s.city === "广州");
+  if (regionKey.value === "guangxi") return sites.filter((s) => s.province === "广西");
   return sites;
 };
 
@@ -139,18 +132,6 @@ const clearLayers = () => {
   heatLayer = null;
   barMarkerList.forEach((item) => item.setMap(null));
   barMarkerList = [];
-  flylineDots.forEach((d) => d.setMap(null));
-  flylineDots = [];
-  flylineRoutes = [];
-  if (flylineRafId !== null) {
-    cancelAnimationFrame(flylineRafId);
-    flylineRafId = null;
-  }
-  const cv = flyCanvas.value;
-  if (cv) {
-    const ctx = cv.getContext("2d");
-    if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
-  }
 };
 
 const renderHeat = () => {
@@ -182,127 +163,10 @@ const renderBar3D = () => {
   });
 };
 
-/* ---------- 飞线：Canvas 叠加层 ---------- */
-
-const bezierCtrl = (s: [number, number], e: [number, number]): [number, number] => {
-  const dx = e[0] - s[0], dy = e[1] - s[1];
-  const d = Math.sqrt(dx * dx + dy * dy);
-  if (d < 1e-6) return [(s[0] + e[0]) / 2, (s[1] + e[1]) / 2];
-  const off = d * 0.25;
-  return [(s[0] + e[0]) / 2 + (-dy / d) * off, (s[1] + e[1]) / 2 + (dx / d) * off];
-};
-
-const bezierCoords = (s: [number, number], e: [number, number], seg = 30): [number, number][] => {
-  const [cx, cy] = bezierCtrl(s, e);
-  return Array.from({ length: seg + 1 }, (_, i) => {
-    const t = i / seg;
-    return [
-      (1 - t) * (1 - t) * s[0] + 2 * (1 - t) * t * cx + t * t * e[0],
-      (1 - t) * (1 - t) * s[1] + 2 * (1 - t) * t * cy + t * t * e[1],
-    ] as [number, number];
-  });
-};
-
-const drawFlylineCanvas = () => {
-  const cv = flyCanvas.value;
-  if (!cv || !map || !flylineRoutes.length) return;
-  const size = map.getSize();
-  const dpr = window.devicePixelRatio || 1;
-  cv.width = size.width * dpr;
-  cv.height = size.height * dpr;
-  cv.style.width = size.width + "px";
-  cv.style.height = size.height + "px";
-  const ctx = cv.getContext("2d")!;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, size.width, size.height);
-
-  for (const fl of flylineRoutes) {
-    const sp = map.lngLatToContainer(new window.AMap.LngLat(fl.start[0], fl.start[1]));
-    const ep = map.lngLatToContainer(new window.AMap.LngLat(fl.end[0], fl.end[1]));
-    const cp = bezierCtrl(
-      [sp.getX(), sp.getY()],
-      [ep.getX(), ep.getY()],
-    );
-
-    ctx.beginPath();
-    ctx.moveTo(sp.getX(), sp.getY());
-    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
-    ctx.strokeStyle = fl.color + "30";
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(sp.getX(), sp.getY());
-    ctx.quadraticCurveTo(cp[0], cp[1], ep.getX(), ep.getY());
-    ctx.strokeStyle = fl.color + "AA";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-};
-
-const renderFlylines = () => {
-  const sites = filteredSites();
-  if (!sites.length || !map) return;
-
-  const groups: Record<string, typeof sites> = {};
-  for (const s of sites) {
-    (groups[s.parent_name || "__none__"] ??= []).push(s);
-  }
-
-  flylineRoutes = [];
-  for (const children of Object.values(groups)) {
-    if (children.length < 2) continue;
-    const cx = children.reduce((a, c) => a + c.lng, 0) / children.length;
-    const cy = children.reduce((a, c) => a + c.lat, 0) / children.length;
-    if (!isFinite(cx) || !isFinite(cy)) continue;
-    for (const child of children) {
-      if (!isFinite(child.lng) || !isFinite(child.lat)) continue;
-      const color = markerColor(child.company_type);
-      const coords = bezierCoords([child.lng, child.lat], [cx, cy]);
-      flylineRoutes.push({ start: [child.lng, child.lat], end: [cx, cy], color, coords });
-    }
-  }
-
-  drawFlylineCanvas();
-
-  flylineDots = flylineRoutes.map((fl) => {
-    const dot = new window.AMap.Marker({
-      position: fl.start,
-      content: `<div style="width:5px;height:5px;border-radius:50%;background:${fl.color};box-shadow:0 0 6px ${fl.color},0 0 14px ${fl.color}66;"></div>`,
-      offset: new window.AMap.Pixel(-2.5, -2.5),
-    });
-    dot.setMap(map);
-    return dot;
-  });
-
-  const anims = flylineRoutes.map((fl, i) => ({
-    marker: flylineDots[i],
-    coords: fl.coords,
-    duration: 3000 + Math.random() * 2000,
-    startTime: performance.now() + Math.random() * 3000,
-  }));
-
-  const step = (now: number) => {
-    for (const a of anims) {
-      const t = (((now - a.startTime) % a.duration) + a.duration) % a.duration / a.duration;
-      const rawIdx = t * (a.coords.length - 1);
-      const idx = Math.min(Math.floor(rawIdx), a.coords.length - 2);
-      const frac = rawIdx - idx;
-      const lng = a.coords[idx][0] + (a.coords[idx + 1][0] - a.coords[idx][0]) * frac;
-      const lat = a.coords[idx][1] + (a.coords[idx + 1][1] - a.coords[idx][1]) * frac;
-      if (isFinite(lng) && isFinite(lat)) a.marker.setPosition([lng, lat]);
-    }
-    flylineRafId = requestAnimationFrame(step);
-  };
-  flylineRafId = requestAnimationFrame(step);
-};
-
 const renderLayer = (val: string) => {
   clearLayers();
-  const showMarkers = val === "point" || val === "flyline";
+  const showMarkers = val === "point";
   markerList.forEach((m) => m.setMap(showMarkers ? map : null));
-  if (val === "flyline") renderFlylines();
   if (val === "heat") renderHeat();
   if (val === "3d") renderBar3D();
 };
@@ -321,9 +185,6 @@ onMounted(async () => {
     mapStyle: "amap://styles/darkblue",
     pitch: 40,
   });
-  map.on("viewchange", () => {
-    if (flylineRoutes.length) drawFlylineCanvas();
-  });
   fullRedraw();
 });
 
@@ -332,7 +193,6 @@ watch(layer, (val) => renderLayer(val));
 watch(regionKey, () => fullRedraw());
 
 onUnmounted(() => {
-  if (flylineRafId !== null) cancelAnimationFrame(flylineRafId);
   map?.destroy();
 });
 </script>
@@ -347,15 +207,6 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
 }
-.flyline-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
-}
 .region-switch {
   position: absolute;
   right: 12px;
@@ -367,5 +218,38 @@ onUnmounted(() => {
   right: 12px;
   bottom: 12px;
   z-index: 10;
+}
+
+.region-switch,
+.layer-switch {
+  display: flex;
+  gap: 6px;
+  background: rgba(4, 14, 28, 0.75);
+  border: 1px solid rgba(57, 216, 255, 0.25);
+  border-radius: 6px;
+  padding: 4px;
+  backdrop-filter: blur(4px);
+
+  button {
+    padding: 5px 14px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(168, 201, 255, 0.65);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+
+    &:hover {
+      color: rgba(168, 201, 255, 0.9);
+      background: rgba(0, 212, 255, 0.06);
+    }
+
+    &.active {
+      background: rgba(0, 212, 255, 0.15);
+      border-color: rgba(0, 212, 255, 0.45);
+      color: #00d4ff;
+    }
+  }
 }
 </style>
