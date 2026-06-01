@@ -29,14 +29,16 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 </script>
 
 <style scoped lang="scss">
+/* 基于 vw/vh 的弹性布局，适配 1080p ~ 2K+ 任意分辨率 */
 .screen-wrapper {
   position: relative;
   display: grid;
-  grid-template-columns: 420px 1fr 420px;
-  grid-template-rows: 88px 260px 210px 1fr 260px;
-  gap: 10px;
-  width: 1920px;
-  height: 1080px;
+  grid-template-columns: clamp(320px, 21.875vw, 500px) 1fr clamp(320px, 21.875vw, 500px);
+  grid-template-rows: clamp(50px, 6.5vh, 72px) clamp(285px, 26.5vh, 380px) clamp(230px, 21.5vh, 340px) 1fr clamp(228px, 21.2vh, 340px);
+  gap: max(5px, 0.93vh) max(5px, 0.52vw);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   &::after {
     content: "";
     pointer-events: none;
@@ -46,38 +48,42 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
       rgba(59, 207, 255, 0.02) 50%,
       rgba(8, 24, 48, 0.02) 50%
     );
-    background-size: 100% 4px;
+    background-size: 100% calc(100vh / 270);
     mix-blend-mode: screen;
     opacity: 0.45;
+    z-index: 1000;
   }
 }
 .panel {
   border: 1px solid rgba(57, 216, 255, 0.35);
   background: linear-gradient(180deg, rgba(8, 28, 56, 0.88), rgba(4, 14, 28, 0.88));
   box-shadow: inset 0 0 30px rgba(26, 174, 255, 0.16);
-  border-radius: 8px;
+  border-radius: max(4px, 0.42vw);
   overflow: hidden;
+  min-height: 0;
 }
 .header {
   grid-column: 1 / 4;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 20px;
+  padding: 0 clamp(10px, 1.04vw, 24px);
   position: relative;
 }
 .title {
-  font-size: 30px;
+  font-size: clamp(20px, 2.8vw, 36px);
   letter-spacing: 1px;
   color: #7ee7ff;
   text-shadow: 0 0 12px rgba(84, 229, 255, 0.65);
 }
 .meta {
   position: absolute;
-  right: 20px;
+  right: clamp(10px, 1.04vw, 24px);
   display: flex;
-  gap: 14px;
+  gap: max(8px, 0.73vw);
   align-items: center;
+  font-size: clamp(11px, 0.83vw, 16px);
+  color: rgba(168, 201, 255, 0.7);
 }
 .left-top {
   grid-column: 1;
@@ -96,14 +102,15 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   grid-row: 2 / 5;
   position: relative;
   z-index: 2;
+  overflow: hidden;
 }
 .right-top {
   grid-column: 3;
-  grid-row: 2 / 4;
+  grid-row: 2;
 }
 .right-bottom {
   grid-column: 3;
-  grid-row: 4;
+  grid-row: 3 / 5;
 }
 .footer {
   grid-column: 1 / 4;

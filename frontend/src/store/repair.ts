@@ -49,6 +49,11 @@ export interface CustomerDistItem {
   pct_rev: number;
 }
 
+export type CompanyFilter = "all" | "self" | "outsourced";
+export type MapRenderMode = "point" | "heat" | "3d";
+export type MapViewMode = "aggregate" | "drilldown";
+export type RegionFilter = "all" | "guangdong" | "guangxi";
+
 export const useRepairStore = defineStore("repair", () => {
   const loading = ref(false);
   const year = ref(2026);
@@ -58,6 +63,8 @@ export const useRepairStore = defineStore("repair", () => {
     self_: RepairKpiBlock;
     outsourced: RepairKpiBlock;
     thirdparty: RepairKpiBlock;
+    cosco: RepairKpiBlock;
+    total: RepairKpiBlock;
     week_label: string;
   } | null>(null);
 
@@ -69,6 +76,12 @@ export const useRepairStore = defineStore("repair", () => {
   const customerDist = ref<CustomerDistItem[]>([]);
   const cumulative = ref<any[]>([]);
   const sites = ref<NetworkSite[]>([]);
+
+  /* ---------- 地图统一状态 ---------- */
+  const viewMode = ref<MapViewMode>("aggregate");
+  const companyFilter = ref<CompanyFilter>("all");
+  const renderMode = ref<MapRenderMode>("point");
+  const regionFilter = ref<RegionFilter>("all");
 
   const loadAll = async () => {
     loading.value = true;
@@ -88,10 +101,6 @@ export const useRepairStore = defineStore("repair", () => {
       customerDist.value = custRes;
       cumulative.value = cumRes;
       sites.value = sitesRes;
-
-      if (selfRes.length > 0 && !selectedParent.value) {
-        await drilldown(selfRes[0].org_name);
-      }
     } catch (e: any) {
       const msg = e?.response?.data?.detail || e?.message || "修理业务数据加载失败";
       console.error("[repair] loadAll failed", e);
@@ -102,7 +111,11 @@ export const useRepairStore = defineStore("repair", () => {
   };
 
   const drilldown = async (parentName: string) => {
+    /* 幂等：同一机构不重复触发 */
+    if (parentName === selectedParent.value) return;
+
     selectedParent.value = parentName;
+    viewMode.value = "drilldown";
     try {
       const res = await getRepairSiteDrilldown(parentName, year.value, week.value);
       siteDetails.value = res.items || [];
@@ -110,6 +123,20 @@ export const useRepairStore = defineStore("repair", () => {
     } catch (e: any) {
       console.error("[repair] drilldown failed", e);
       ElMessage.error("网点明细加载失败");
+    }
+  };
+
+  const clearDrilldown = () => {
+    selectedParent.value = null;
+    siteDetails.value = [];
+    viewMode.value = "aggregate";
+  };
+
+  const switchView = (mode: MapViewMode) => {
+    viewMode.value = mode;
+    if (mode === "aggregate") {
+      selectedParent.value = null;
+      siteDetails.value = [];
     }
   };
 
@@ -126,7 +153,13 @@ export const useRepairStore = defineStore("repair", () => {
     customerDist,
     cumulative,
     sites,
+    viewMode,
+    companyFilter,
+    renderMode,
+    regionFilter,
     loadAll,
     drilldown,
+    clearDrilldown,
+    switchView,
   };
 });
