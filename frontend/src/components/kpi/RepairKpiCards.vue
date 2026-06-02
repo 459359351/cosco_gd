@@ -1,27 +1,73 @@
 <template>
   <div class="kpi-cards">
-    <div v-for="block in blocks" :key="block.key" class="kpi-card" :style="{ borderColor: block.color }">
-      <div class="kpi-title" :style="{ color: block.color }">{{ block.label }}</div>
+    <!-- 需求5-1: 修箱收入 / 箱量 / 单箱收入 -->
+    <div class="kpi-card" style="border-left-color: #00d4ff">
+      <div class="kpi-title" style="color: #00d4ff">修箱收入</div>
       <div class="kpi-row">
         <div class="kpi-metric">
-          <span class="kpi-label">修理量</span>
-          <span class="kpi-value">{{ formatNum(block.qty) }}</span>
-          <span class="kpi-unit">箱</span>
-          <span v-if="block.qtyWow" class="kpi-change" :class="block.qtyWow > 0 ? 'up' : 'down'">
-            {{ block.qtyWow > 0 ? '↑' : '↓' }} 环比 +{{ formatNum(block.qtyWow) }} 箱
-          </span>
-        </div>
-        <div class="kpi-metric">
-          <span class="kpi-label">修理收入</span>
-          <span class="kpi-value">{{ formatWan(block.rev) }}</span>
-          <span class="kpi-unit">万</span>
-          <span v-if="block.revWow" class="kpi-change" :class="block.revWow > 0 ? 'up' : 'down'">
-            {{ block.revWow > 0 ? '↑' : '↓' }} 环比 {{ formatPct(block.revWow) }}
-          </span>
+          <span class="kpi-value">{{ formatWan(totalRevenue) }}</span>
+          <span class="kpi-unit">万元</span>
         </div>
       </div>
-      <div v-if="block.qtyYoy !== null" class="kpi-yoy">
-        同比 {{ block.qtyYoy >= 0 ? '+' : '' }}{{ block.qtyYoy?.toLocaleString() }} 箱
+      <div class="kpi-sub">
+        <span>箱量 {{ formatNum(totalQty) }} 个</span>
+        <span>单箱 ¥{{ formatNum(unitPrice) }}</span>
+      </div>
+      <div class="kpi-trend" :class="revWowClass">
+        {{ revWowArrow }} {{ formatPct(revWow) }} 环比
+      </div>
+    </div>
+
+    <!-- 需求5-2: 本周总收入 -->
+    <div class="kpi-card highlight" style="border-left-color: #2ecc71">
+      <div class="kpi-title" style="color: #2ecc71">本周总收入</div>
+      <div class="kpi-row">
+        <div class="kpi-metric">
+          <span class="kpi-value" style="color: #2ecc71">{{ formatWan(totalRevenue) }}</span>
+          <span class="kpi-unit">万元</span>
+        </div>
+      </div>
+      <div class="kpi-sub">
+        <span>上周 {{ formatWan(lastWeekRevenue) }} 万元</span>
+      </div>
+      <div class="kpi-trend" :class="revWowClass">
+        {{ revWowArrow }} {{ formatPct(revWow) }} 环比变动
+      </div>
+    </div>
+
+    <!-- 需求5-3: 中远海 -->
+    <div class="kpi-card" style="border-left-color: #00d4ff">
+      <div class="kpi-title" style="color: #00d4ff">中远海 COSCO</div>
+      <div class="kpi-inline">
+        <span class="kpi-label">收入</span>
+        <span class="kpi-value-sm">{{ formatWan(coscoRev) }}<span class="kpi-unit">万</span></span>
+        <span v-if="coscoRevWow !== null" class="kpi-change" :class="coscoRevWow > 0 ? 'up' : 'down'">
+          {{ coscoRevWow > 0 ? '↑' : '↓' }}{{ formatPct(coscoRevWow) }}
+        </span>
+      </div>
+      <div class="kpi-inline">
+        <span class="kpi-label">箱量</span>
+        <span class="kpi-value-sm">{{ formatNum(coscoQty) }}<span class="kpi-unit">个</span></span>
+        <span class="kpi-label" style="margin-left: 6px">单箱</span>
+        <span class="kpi-value-sm">¥{{ formatNum(coscoUnit) }}</span>
+      </div>
+    </div>
+
+    <!-- 需求5-3: 第三方 -->
+    <div class="kpi-card" style="border-left-color: #ff9f43">
+      <div class="kpi-title" style="color: #ff9f43">第三方客户</div>
+      <div class="kpi-inline">
+        <span class="kpi-label">收入</span>
+        <span class="kpi-value-sm">{{ formatWan(thirdRev) }}<span class="kpi-unit">万</span></span>
+        <span v-if="thirdRevWow !== null" class="kpi-change" :class="thirdRevWow > 0 ? 'up' : 'down'">
+          {{ thirdRevWow > 0 ? '↑' : '↓' }}{{ formatPct(thirdRevWow) }}
+        </span>
+      </div>
+      <div class="kpi-inline">
+        <span class="kpi-label">箱量</span>
+        <span class="kpi-value-sm">{{ formatNum(thirdQty) }}<span class="kpi-unit">个</span></span>
+        <span class="kpi-label" style="margin-left: 6px">单箱</span>
+        <span class="kpi-value-sm">¥{{ formatNum(thirdUnit) }}</span>
       </div>
     </div>
   </div>
@@ -29,116 +75,154 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-
 import { useRepairStore } from "@/store/repair";
 
 const store = useRepairStore();
 
-const blocks = computed(() => {
-  const kpi = store.kpi;
-  if (!kpi) return [];
+const totalRevenue = computed(() => store.kpi?.total?.revenue ?? 0);
+const totalQty = computed(() => store.kpi?.total?.container_qty ?? 0);
+const unitPrice = computed(() => store.kpi?.total?.unit_price ?? 0);
+const revWow = computed(() => store.kpi?.total?.rev_wow ?? 0);
 
-  return [
-    {
-      key: "self",
-      label: "自营",
-      color: "#00d4ff",
-      qty: kpi.self_.container_qty,
-      qtyWow: kpi.self_.qty_wow,
-      rev: kpi.self_.revenue,
-      revWow: kpi.self_.rev_wow,
-      qtyYoy: kpi.self_.qty_yoy,
-    },
-    {
-      key: "outsourced",
-      label: "外包",
-      color: "#ff9f43",
-      qty: kpi.outsourced.container_qty,
-      qtyWow: kpi.outsourced.qty_wow,
-      rev: kpi.outsourced.revenue,
-      revWow: kpi.outsourced.rev_wow,
-      qtyYoy: kpi.outsourced.qty_yoy,
-    },
-    {
-      key: "thirdparty",
-      label: "第三方干箱",
-      color: "#2ecc71",
-      qty: kpi.thirdparty.container_qty,
-      qtyWow: kpi.thirdparty.qty_wow,
-      rev: kpi.thirdparty.revenue,
-      revWow: kpi.thirdparty.rev_wow,
-      qtyYoy: kpi.thirdparty.qty_yoy,
-    },
-  ];
+const coscoRev = computed(() => store.kpi?.cosco?.revenue ?? 0);
+const coscoQty = computed(() => store.kpi?.cosco?.container_qty ?? 0);
+const coscoUnit = computed(() => store.kpi?.cosco?.unit_price ?? 0);
+const coscoRevWow = computed(() => store.kpi?.cosco?.rev_wow ?? null);
+
+const thirdRev = computed(() => store.kpi?.thirdparty?.revenue ?? 0);
+const thirdQty = computed(() => store.kpi?.thirdparty?.container_qty ?? 0);
+const thirdUnit = computed(() => store.kpi?.thirdparty?.unit_price ?? 0);
+const thirdRevWow = computed(() => store.kpi?.thirdparty?.rev_wow ?? null);
+
+const lastWeekRevenue = computed(() => {
+  const tr = totalRevenue.value;
+  const rw = revWow.value;
+  if (!tr || !rw) return 0;
+  return tr / (1 + rw);
 });
 
+const revWowClass = computed(() => revWow.value > 0 ? 'up' : 'down');
+const revWowArrow = computed(() => revWow.value > 0 ? '↑' : '↓');
+
 function formatNum(n: number) {
-  return n?.toLocaleString() ?? "0";
+  if (!n) return "0";
+  return n.toLocaleString();
 }
 function formatWan(n: number) {
+  if (!n) return "0.00";
   return (n / 10000).toFixed(2);
 }
 function formatPct(n: number) {
-  if (!n) return "0%";
-  return (n > 0 ? "+" : "") + (n * 100).toFixed(0) + "%";
+  if (n === null || n === undefined) return "0%";
+  return (n > 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 }
 </script>
 
 <style scoped lang="scss">
 .kpi-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: max(6px, 0.6vh) max(6px, 0.5vw);
+  padding: max(6px, 0.6vh) max(8px, 0.5vw);
   height: 100%;
-  justify-content: center;
+  overflow: hidden;
 }
 .kpi-card {
-  padding: 5px 10px;
-  border: 1px solid rgba(57, 216, 255, 0.35);
+  padding: max(6px, 0.7vh) max(8px, 0.6vw);
+  border: 1px solid rgba(57, 216, 255, 0.25);
   border-left: 3px solid;
   background: linear-gradient(180deg, rgba(8, 28, 56, 0.88), rgba(4, 14, 28, 0.88));
-  border-radius: 6px;
+  border-radius: max(6px, 0.4vw);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+.kpi-card:hover {
+  border-color: rgba(57, 216, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+}
+.kpi-card.highlight {
+  background: linear-gradient(180deg, rgba(8, 40, 30, 0.9), rgba(4, 20, 14, 0.9));
+  border: 1px solid rgba(46, 204, 113, 0.3);
 }
 .kpi-title {
-  font-size: 12px;
+  font-size: clamp(10px, 0.75vw, 13px);
   font-weight: 600;
-  margin-bottom: 2px;
+  margin-bottom: max(2px, 0.3vh);
+  letter-spacing: 1px;
 }
 .kpi-row {
   display: flex;
-  gap: 16px;
+  gap: max(6px, 0.6vw);
 }
 .kpi-metric {
   flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.kpi-sep {
+  width: 8px;
+  flex-shrink: 0;
 }
 .kpi-label {
   color: rgba(168, 201, 255, 0.7);
-  font-size: 10px;
+  font-size: clamp(9px, 0.6vw, 12px);
 }
 .kpi-value {
-  font-size: 17px;
+  font-size: clamp(14px, 1.2vw, 20px);
   font-weight: 700;
   color: #e0f0ff;
-  margin: 0 3px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .kpi-unit {
+  font-size: clamp(9px, 0.6vw, 12px);
   color: rgba(168, 201, 255, 0.5);
-  font-size: 10px;
+}
+.kpi-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.kpi-value-sm {
+  font-size: clamp(12px, 1vw, 16px);
+  font-weight: 700;
+  color: #e0f0ff;
+  line-height: 1.3;
+}
+.kpi-sub {
+  display: flex;
+  gap: 10px;
+  margin-top: max(2px, 0.3vh);
+  font-size: clamp(9px, 0.6vw, 12px);
+  color: rgba(168, 201, 255, 0.6);
+}
+.kpi-trend {
+  font-size: clamp(10px, 0.7vw, 13px);
+  margin-top: max(2px, 0.3vh);
+  font-weight: 600;
+}
+.kpi-trend.up {
+  color: #2ecc71;
+}
+.kpi-trend.down {
+  color: #e74c3c;
 }
 .kpi-change {
-  font-size: 10px;
+  font-size: clamp(9px, 0.6vw, 12px);
   margin-left: 4px;
-  &.up {
-    color: #2ecc71;
-  }
-  &.down {
-    color: #e74c3c;
-  }
 }
-.kpi-yoy {
-  margin-top: 2px;
-  font-size: 10px;
-  color: rgba(168, 201, 255, 0.6);
+.kpi-change.up {
+  color: #2ecc71;
+}
+.kpi-change.down {
+  color: #e74c3c;
 }
 </style>

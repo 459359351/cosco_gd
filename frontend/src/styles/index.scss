@@ -11,6 +11,7 @@ body,
   height: 100%;
   font-family: "Inter", "Microsoft YaHei", sans-serif;
   color: #d9f2ff;
+  background: #030e1e;
 }
 
 .yard-marker {
@@ -63,7 +64,3 @@ body,
   z-index: 6000 !important;
 }
 
-/* 省份筛选下拉：避免被高德地图 WebGL/canvas 层盖住 */
-.cockpit-province-popper.el-popper {
-  z-index: 6000 !important;
-}

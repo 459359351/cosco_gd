@@ -1,0 +1,246 @@
+
+> cosco-gd-frontend@0.1.0 dev
+> vite
+
+Port 5173 is in use, trying another one...
+Port 5174 is in use, trying another one...
+Port 5175 is in use, trying another one...
+Port 5176 is in use, trying another one...
+Port 5177 is in use, trying another one...
+Port 5178 is in use, trying another one...
+Port 5179 is in use, trying another one...
+Port 5180 is in use, trying another one...
+Port 5181 is in use, trying another one...
+Port 5182 is in use, trying another one...
+Port 5183 is in use, trying another one...
+Port 5184 is in use, trying another one...
+Port 5185 is in use, trying another one...
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m602[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5186[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://3.3.3.2:[1m5186[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.18.243:[1m5186[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.28.224.1:[1m5186[22m/[39m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m16:43:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m21:03:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m21:36:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m21:37:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m21:37:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m21:44:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:18:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:18:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:18:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:19:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:19:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:19:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:20:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:20:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m22:27:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+DEPRECATION WARNING [legacy-js-api]: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+
+More info: https://sass-lang.com/d/legacy-js-api
+
+[2m00:41:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m00:42:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m00:42:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m00:42:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:42:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:43:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:43:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:43:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:43:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m00:43:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue[22m
+[2m00:43:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairSiteDrilldown.vue[22m
+[2m00:54:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:54:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m00:54:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m00:55:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m00:55:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m00:55:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m01:16:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m01:16:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m01:17:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m01:30:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m01:31:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m01:48:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/CustomerPieChart.vue[22m
+[2m01:48:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/CustomerPieChart.vue[22m
+[2m01:48:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/CustomerPieChart.vue?vue&type=style&index=0&scoped=9498229f&lang.scss[22m
+[2m14:00:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:01:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:12:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:12:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:12:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:13:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:14:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:17:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:18:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:19:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:20:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:21:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:22:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:37:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:40:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:50:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:50:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:51:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:51:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:53:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:15:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:16:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m15:29:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:29:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m15:34:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m15:37:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:44:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:45:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:45:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m15:46:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m16:04:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m16:04:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m16:05:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m16:05:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m16:17:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m16:18:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m16:20:58[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m16:21:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m16:23:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue[22m
+[2m10:32:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m10:49:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue[22m
+[2m10:50:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue[22m
+[2m10:50:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m10:52:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue[22m
+[2m10:52:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/kpi/RepairKpiCards.vue?vue&type=style&index=0&scoped=4843dcd3&lang.scss[22m
+[2m11:06:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m11:06:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m11:58:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m11:59:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue[22m
+[2m12:05:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:14:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:14:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue[22m
+[2m14:18:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/layouts/ScreenLayout.vue?vue&type=style&index=0&scoped=e0686361&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/RepairOrgRanking.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue, /src/components/charts/RepairOrgRanking.vue?vue&type=style&index=0&scoped=82092445&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue, /src/components/charts/RepairOrgRanking.vue?vue&type=style&index=0&scoped=82092445&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/layouts/ScreenLayout.vue?vue&type=style&index=0&scoped=e0686361&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/layouts/ScreenLayout.vue?vue&type=style&index=0&scoped=e0686361&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/views/Cockpit.vue, /src/components/charts/CustomerPieChart.vue, /src/components/charts/RepairSiteDrilldown.vue, /src/components/tables/RepairOrgTable.vue, /src/components/map/MapCore.vue, /src/components/kpi/RepairKpiCards.vue, /src/components/charts/CumulativeRankChart.vue[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue, /src/components/charts/RepairOrgRanking.vue?vue&type=style&index=0&scoped=82092445&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/charts/RepairOrgRanking.vue, /src/components/charts/RepairOrgRanking.vue?vue&type=style&index=0&scoped=82092445&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/layouts/ScreenLayout.vue?vue&type=style&index=0&scoped=e0686361&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/map/MapCore.vue, /src/components/map/MapCore.vue?vue&type=style&index=0&scoped=0bd5668b&lang.scss[22m
+[2m14:28:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/layouts/ScreenLayout.vue?vue&type=style&index=0&scoped=e0686361&lang.scss[22m

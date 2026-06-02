@@ -6,6 +6,7 @@ class RepairKpiBlock(BaseModel):
     qty_wow: float = 0.0
     revenue: float = 0.0
     rev_wow: float = 0.0
+    unit_price: float = 0.0
     qty_yoy: int | None = None
     rev_yoy: float | None = None
 
@@ -14,6 +15,8 @@ class RepairKpiOverview(BaseModel):
     self_: RepairKpiBlock = RepairKpiBlock()
     outsourced: RepairKpiBlock = RepairKpiBlock()
     thirdparty: RepairKpiBlock = RepairKpiBlock()
+    cosco: RepairKpiBlock = RepairKpiBlock()
+    total: RepairKpiBlock = RepairKpiBlock()
     week_label: str = ""
 
 

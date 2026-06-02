@@ -1,10 +1,22 @@
-"""Excel 周报导入解析器 — 基于内容识别区域，不硬编码行号。"""
+"""Excel 周报导入解析器 — 仅从主 Sheet + 同比 Sheet 提取全部数据。
+
+主 Sheet 结构（以"2026年第20周"为例）：
+  R1-R3        表头
+  R4-R9        自营机构行（[24-28]列含累计数据）
+  R10          自营总计
+  R11-R34      外包机构行
+  R35          外包总计
+  R36          自营外包总计
+  R37-R41      占比/汇总
+  R42          "网点明细报表" 标题
+  R43-R44      网点明细表头
+  R45-R182     各网点明细（[1]经营单位 [2]网点名 + 箱量/产值等）
+"""
 
 from __future__ import annotations
 
 import json
 import re
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -40,12 +52,6 @@ TOTAL_PATTERNS = {
     "outsourced_total": ("外包总计",),
 }
 
-YOY_ROLE_KEYWORDS = {
-    "inspection": ("检修",),
-    "network": ("经营单位",),
-    "cumulative": ("周完成", "完成情况"),
-}
-
 
 def _safe_float(val) -> float:
     if val is None:
@@ -71,7 +77,6 @@ def _cell(ws, row: int, col: int):
 
 
 def _classify_company(name: str) -> str:
-    """判断经营单位是自营还是外包。"""
     return "self" if name in SELF_ORG_NAMES else "outsourced"
 
 
@@ -88,11 +93,16 @@ def parse_sheet_name(name: str) -> dict:
     if m:
         info["detected_year"] = int(m.group(1))
         info["detected_week"] = int(m.group(2))
-    for role, keywords in YOY_ROLE_KEYWORDS.items():
-        if any(k in name for k in keywords):
-            info["suggested_role"] = role
-            break
     return info
+
+
+# ---------------------------------------------------------------------------
+# 列映射：中远海 cosco / 第三方 thirdparty
+# ---------------------------------------------------------------------------
+
+# (qty, qty_wow, rev, rev_wow, unit_price, move_fee, total_qty, total_rev, per_capita, staff)
+COLS_COSCO = (3, 4, 5, 6, 7, 9, 20, 21, 22, 23)
+COLS_THIRD = (10, 11, 12, 13, 14, 16, 20, 21, 22, 23)
 
 
 # ---------------------------------------------------------------------------
@@ -112,12 +122,23 @@ class WeeklyExcelImporter:
     # -- 公共入口 --
 
     def parse_all(self) -> dict:
+        ws = self._find_main_sheet()
+        if ws is None:
+            return {"orgs": [], "summaries": [], "sites": [], "site_details": [], "cumulative": []}
+
+        # 先解析网点明细区域以建立 site_registry
+        sites = self._parse_site_zone(ws)
+        # 再解析机构汇总区域
+        orgs = self._parse_org_zone(ws)
+        summaries = self._parse_summary_zone(ws)
+        cumulative = self._parse_cumulative_sheet()
+
         return {
-            "orgs": self._parse_main_sheet(),
-            "summaries": self._parse_main_sheet_summaries(),
-            "site_details": self._parse_inspection_sheet(),
-            "sites": self._parse_network_sites_sheet(),
-            "cumulative": self._parse_cumulative_sheet(),
+            "orgs": orgs,
+            "summaries": summaries,
+            "sites": sites,
+            "site_details": self._build_site_details(ws),
+            "cumulative": cumulative,
         }
 
     def parse_yoy(self, yoy_sheet_name: str) -> dict:
@@ -126,34 +147,29 @@ class WeeklyExcelImporter:
             return {"yoy_orgs": [], "yoy_summaries": []}
         ws = self.wb[yoy_sheet_name]
         return {
-            "yoy_orgs": self._parse_org_rows(ws, prev_year, prev_week),
-            "yoy_summaries": self._parse_summary_rows(ws, prev_year, prev_week),
+            "yoy_orgs": self._parse_org_zone(ws, prev_year, prev_week),
+            "yoy_summaries": self._parse_summary_zone(ws, prev_year, prev_week),
         }
+
+    # Sheet 名字中属于辅助/汇总表的过滤词（不应作为主数据或同比 sheet）
+    _SKIP_SHEET_KEYWORDS = ("纯", "洗", "新")
 
     def preview_sheets(self) -> list[dict]:
         sheets: list[dict] = []
         prev_year, prev_week = self._get_yoy_year_week()
         for name in self.wb.sheetnames:
             info = parse_sheet_name(name)
-            if info["detected_year"] == self.year and info["detected_week"] == self.week:
+            is_skip = any(kw in name for kw in self._SKIP_SHEET_KEYWORDS)
+            if not is_skip and info["detected_year"] == self.year and info["detected_week"] == self.week:
                 info["suggested_role"] = "current"
-            elif info["detected_year"] == prev_year and info["detected_week"] == prev_week:
+            elif not is_skip and info["detected_year"] == prev_year and info["detected_week"] == prev_week:
                 info["suggested_role"] = "yoy"
-            elif info["suggested_role"] is None:
-                info["suggested_role"] = None
             sheets.append({"name": name, **info})
         return sheets
 
     # -- Sheet 定位 --
 
-    def _find_sheet(self, *keywords: str):
-        for name in self.wb.sheetnames:
-            if all(k in name for k in keywords):
-                return self.wb[name]
-        return None
-
     def _find_main_sheet(self):
-        """根据 year/week 定位主数据 Sheet。"""
         target_year = str(self.year)
         week_str = str(self.week)
         for name in self.wb.sheetnames:
@@ -162,99 +178,74 @@ class WeeklyExcelImporter:
                     return self.wb[name]
         return None
 
-    # -- 解析主 Sheet 机构行 --
+    # -- 区域1：机构行 (R4 ~ "网点明细" 之前) --
 
-    def _parse_main_sheet(self) -> list[dict]:
-        ws = self._find_main_sheet()
-        if ws is None:
-            return []
-        records = self._parse_org_rows(ws, self.year, self.week)
-        self.row_counts["orgs"] = len(records)
-        return records
-
-    def _parse_org_rows(self, ws, target_year: int, target_week: int) -> list[dict]:
+    def _parse_org_zone(self, ws, target_year: int = None, target_week: int = None) -> list[dict]:
+        ty = target_year or self.year
+        tw = target_week or self.week
         records: list[dict] = []
         current_type = ""
-        in_summary_zone = False
 
         for row_idx in range(4, ws.max_row + 1):
             a_val = _cell(ws, row_idx, 1)
-            b_val = _cell(ws, row_idx, 2)
-
             if a_val and "网点明细" in str(a_val):
                 break
-            if a_val and "全部干箱" in str(a_val):
-                in_summary_zone = True
-            if in_summary_zone:
-                continue
 
-            if a_val and "自营" in str(a_val) and "合作" not in str(a_val) and "外包" not in str(a_val):
-                current_type = "self"
-            elif a_val and "合作供应商" in str(a_val):
-                current_type = "outsourced"
-
+            b_val = _cell(ws, row_idx, 2)
             if not b_val:
                 continue
 
-            b_str = str(b_val).strip()
-            if not b_str or b_str == "0":
-                continue
+            a_str = str(a_val).strip() if a_val else ""
+            if "自营" in a_str and "合作" not in a_str and "外包" not in a_str:
+                current_type = "self"
+            elif "合作供应商" in a_str:
+                current_type = "outsourced"
 
-            is_total = any(kw in b_str for kw in ("自营总计", "外包总计", "自营外包总计", "总计"))
-            if is_total:
+            b_str = str(b_val).strip()
+            if not b_str or b_str in ("部门/单位", "环比增减"):
                 continue
-            if b_str in ("部门/单位", "环比增减"):
+            if any(kw in b_str for kw in ("自营总计", "外包总计", "自营外包总计")):
                 continue
 
             org_name = b_str
             org_code = _make_code(org_name)
             company_type = current_type if current_type else _classify_company(org_name)
 
-            for cust_type, cols in [("cosco", (3, 4, 5, 6, 7, 9, 20, 21, 22, 23)), ("thirdparty", (10, 11, 12, 13, 14, 16, 20, 21, 22, 23))]:
-                qty_col, qty_wow_col, rev_col, rev_wow_col, unit_col, move_col, total_qty_col, total_rev_col, per_capita_col, staff_col = cols
+            for cust_type, cols in [("cosco", COLS_COSCO), ("thirdparty", COLS_THIRD)]:
+                qty_c, wow_c, rev_c, rwow_c, unit_c, move_c, tqty_c, trev_c, pcap_c, staff_c = cols
                 records.append({
-                    "year": target_year,
-                    "week": target_week,
+                    "year": ty, "week": tw,
                     "company_type": company_type,
-                    "org_name": org_name,
-                    "org_code": org_code,
+                    "org_name": org_name, "org_code": org_code,
                     "customer_type": cust_type,
-                    "container_qty": _safe_int(_cell(ws, row_idx, qty_col)),
-                    "qty_wow_change": _safe_int(_cell(ws, row_idx, qty_wow_col)),
-                    "revenue": _safe_float(_cell(ws, row_idx, rev_col)),
-                    "rev_wow_change": _safe_float(_cell(ws, row_idx, rev_wow_col)),
-                    "unit_price": _safe_float(_cell(ws, row_idx, unit_col)),
-                    "move_fee": _safe_float(_cell(ws, row_idx, move_col)),
-                    "total_qty": _safe_int(_cell(ws, row_idx, total_qty_col)),
-                    "total_revenue": _safe_float(_cell(ws, row_idx, total_rev_col)),
-                    "per_capita": _safe_float(_cell(ws, row_idx, per_capita_col)),
-                    "staff_count": _safe_int(_cell(ws, row_idx, staff_col)),
+                    "container_qty": _safe_int(_cell(ws, row_idx, qty_c)),
+                    "qty_wow_change": _safe_int(_cell(ws, row_idx, wow_c)),
+                    "revenue": _safe_float(_cell(ws, row_idx, rev_c)),
+                    "rev_wow_change": _safe_float(_cell(ws, row_idx, rwow_c)),
+                    "unit_price": _safe_float(_cell(ws, row_idx, unit_c)),
+                    "move_fee": _safe_float(_cell(ws, row_idx, move_c)),
+                    "total_qty": _safe_int(_cell(ws, row_idx, tqty_c)),
+                    "total_revenue": _safe_float(_cell(ws, row_idx, trev_c)),
+                    "per_capita": _safe_float(_cell(ws, row_idx, pcap_c)),
+                    "staff_count": _safe_int(_cell(ws, row_idx, staff_c)),
                 })
 
+        self.row_counts["orgs"] = len(records)
         return records
 
-    def _parse_main_sheet_summaries(self) -> list[dict]:
-        ws = self._find_main_sheet()
-        if ws is None:
-            return []
-        records = self._parse_summary_rows(ws, self.year, self.week)
-        self.row_counts["summaries"] = len(records)
-        return records
+    # -- 区域2：汇总行（自营总计/外包总计/自营外包总计）--
 
-    def _parse_summary_rows(self, ws, target_year: int, target_week: int) -> list[dict]:
+    def _parse_summary_zone(self, ws, target_year: int = None, target_week: int = None) -> list[dict]:
+        ty = target_year or self.year
+        tw = target_week or self.week
         records: list[dict] = []
-        in_summary_zone = False
+
         for row_idx in range(4, ws.max_row + 1):
             a_val = _cell(ws, row_idx, 1)
-            b_val = _cell(ws, row_idx, 2)
-
             if a_val and "网点明细" in str(a_val):
                 break
-            if a_val and "全部干箱" in str(a_val):
-                in_summary_zone = True
-            if in_summary_zone:
-                continue
 
+            b_val = _cell(ws, row_idx, 2)
             label = ""
             if b_val:
                 label = str(b_val).strip()
@@ -271,67 +262,42 @@ class WeeklyExcelImporter:
             if not matched_type:
                 continue
 
-            for cust_type, cols in [("cosco", (3, 4, 5, 6, 7, 9, 20, 21, 22, 23)), ("thirdparty", (10, 11, 12, 13, 14, 16, 20, 21, 22, 23))]:
-                qty_col, qty_wow_col, rev_col, rev_wow_col, unit_col, move_col, total_qty_col, total_rev_col, per_capita_col, staff_col = cols
+            for cust_type, cols in [("cosco", COLS_COSCO), ("thirdparty", COLS_THIRD)]:
+                qty_c, wow_c, rev_c, rwow_c, unit_c, move_c, tqty_c, trev_c, pcap_c, staff_c = cols
                 records.append({
-                    "year": target_year,
-                    "week": target_week,
+                    "year": ty, "week": tw,
                     "summary_type": matched_type,
                     "customer_type": cust_type,
-                    "container_qty": _safe_int(_cell(ws, row_idx, qty_col)),
-                    "qty_wow_change": _safe_int(_cell(ws, row_idx, qty_wow_col)),
-                    "revenue": _safe_float(_cell(ws, row_idx, rev_col)),
-                    "rev_wow_change": _safe_float(_cell(ws, row_idx, rev_wow_col)),
-                    "unit_price": _safe_float(_cell(ws, row_idx, unit_col)),
-                    "move_fee": _safe_float(_cell(ws, row_idx, move_col)),
-                    "total_qty": _safe_int(_cell(ws, row_idx, total_qty_col)),
-                    "total_revenue": _safe_float(_cell(ws, row_idx, total_rev_col)),
-                    "per_capita": _safe_float(_cell(ws, row_idx, per_capita_col)),
-                    "staff_count": _safe_int(_cell(ws, row_idx, staff_col)),
+                    "container_qty": _safe_int(_cell(ws, row_idx, qty_c)),
+                    "qty_wow_change": _safe_int(_cell(ws, row_idx, wow_c)),
+                    "revenue": _safe_float(_cell(ws, row_idx, rev_c)),
+                    "rev_wow_change": _safe_float(_cell(ws, row_idx, rwow_c)),
+                    "unit_price": _safe_float(_cell(ws, row_idx, unit_c)),
+                    "move_fee": _safe_float(_cell(ws, row_idx, move_c)),
+                    "total_qty": _safe_int(_cell(ws, row_idx, tqty_c)),
+                    "total_revenue": _safe_float(_cell(ws, row_idx, trev_c)),
+                    "per_capita": _safe_float(_cell(ws, row_idx, pcap_c)),
+                    "staff_count": _safe_int(_cell(ws, row_idx, staff_c)),
                 })
 
+        self.row_counts["summaries"] = len(records)
         return records
 
-    # -- 解析周检修业务统计数据 --
+    # -- 区域3：网点明细 (R42"网点明细报表" 之后) --
 
-    def _parse_inspection_sheet(self) -> list[dict]:
-        ws = self._find_sheet("检修")
-        if ws is None:
+    def _parse_site_zone(self, ws) -> list[dict]:
+        # 定位"网点明细报表"
+        start_row = None
+        for row_idx in range(1, ws.max_row + 1):
+            v = _cell(ws, row_idx, 1)
+            if v and "网点明细" in str(v):
+                start_row = row_idx
+                break
+        if start_row is None:
             return []
 
         records: list[dict] = []
-        for row_idx in range(2, ws.max_row + 1):
-            company_name = _cell(ws, row_idx, 1)
-            site_name = _cell(ws, row_idx, 2)
-            if not company_name or not site_name:
-                continue
-
-            parent_info = self._lookup_parent(str(site_name).strip())
-            records.append({
-                "year": self.year,
-                "week": self.week,
-                "site_name": str(site_name).strip(),
-                "company_name": str(company_name).strip(),
-                "company_type": parent_info["company_type"],
-                "container_class": str(_cell(ws, row_idx, 3) or "").strip(),
-                "customer_name": str(_cell(ws, row_idx, 4) or "").strip(),
-                "repair_qty": _safe_int(_cell(ws, row_idx, 5)),
-                "approved_amount": _safe_float(_cell(ws, row_idx, 9)),
-                "move_fee": _safe_float(_cell(ws, row_idx, 12)),
-            })
-
-        self.row_counts["site_details"] = len(records)
-        return records
-
-    # -- 解析经营单位 --
-
-    def _parse_network_sites_sheet(self) -> list[dict]:
-        ws = self._find_sheet("经营单位")
-        if ws is None:
-            return []
-
-        records: list[dict] = []
-        for row_idx in range(2, ws.max_row + 1):
+        for row_idx in range(start_row + 2, ws.max_row + 1):
             parent_name = _cell(ws, row_idx, 1)
             site_name = _cell(ws, row_idx, 2)
             if not parent_name or not site_name:
@@ -339,8 +305,12 @@ class WeeklyExcelImporter:
 
             parent_name = str(parent_name).strip()
             site_name = str(site_name).strip()
-            company_type = _classify_company(parent_name)
 
+            # 如果 col1 是表头或非数据行则跳过
+            if parent_name in ("部门/单位", "业务类型") or "合计" in parent_name:
+                continue
+
+            company_type = _classify_company(parent_name)
             code = _make_code(f"{parent_name}_{site_name}")
             parent_code = _make_code(parent_name)
 
@@ -361,6 +331,175 @@ class WeeklyExcelImporter:
         self.row_counts["sites"] = len(records)
         return records
 
+    # -- 区域3b：网点明细 → RepairWeeklySiteDetail --
+
+    def _build_site_details(self, ws) -> list[dict]:
+        # 定位"网点明细报表"
+        start_row = None
+        for row_idx in range(1, ws.max_row + 1):
+            v = _cell(ws, row_idx, 1)
+            if v and "网点明细" in str(v):
+                start_row = row_idx
+                break
+        if start_row is None:
+            return []
+
+        records: list[dict] = []
+        for row_idx in range(start_row + 2, ws.max_row + 1):
+            parent_name = _cell(ws, row_idx, 1)
+            site_name = _cell(ws, row_idx, 2)
+            if not parent_name or not site_name:
+                continue
+
+            parent_name = str(parent_name).strip()
+            site_name = str(site_name).strip()
+            if parent_name in ("部门/单位", "业务类型") or "合计" in parent_name:
+                continue
+
+            parent_info = self._lookup_parent(site_name)
+
+            # 按中远海/第三方分别生成记录
+            cosco_qty = _safe_int(_cell(ws, row_idx, 3))
+            cosco_rev = _safe_float(_cell(ws, row_idx, 5))
+            third_qty = _safe_int(_cell(ws, row_idx, 10))
+            third_rev = _safe_float(_cell(ws, row_idx, 12))
+
+            if cosco_qty > 0 or cosco_rev > 0:
+                records.append({
+                    "year": self.year, "week": self.week,
+                    "site_name": site_name,
+                    "company_name": parent_name,
+                    "company_type": parent_info["company_type"],
+                    "container_class": "干箱",
+                    "customer_name": "中远海",
+                    "repair_qty": cosco_qty,
+                    "approved_amount": cosco_rev,
+                    "move_fee": _safe_float(_cell(ws, row_idx, 9)),
+                })
+
+            if third_qty > 0 or third_rev > 0:
+                records.append({
+                    "year": self.year, "week": self.week,
+                    "site_name": site_name,
+                    "company_name": parent_name,
+                    "company_type": parent_info["company_type"],
+                    "container_class": "干箱",
+                    "customer_name": "第三方",
+                    "repair_qty": third_qty,
+                    "approved_amount": third_rev,
+                    "move_fee": 0.0,
+                })
+
+        self.row_counts["site_details"] = len(records)
+        return records
+
+    # -- 区域4：累计数据（从"自营周完成情况" Sheet 提取）--
+
+    def _find_cumulative_sheet(self):
+        """定位 '自营NNNN周完成情况' Sheet。"""
+        for name in self.wb.sheetnames:
+            if "周完成情况" in name or "完成情况" in name:
+                return self.wb[name]
+        return None
+
+    def _parse_cumulative_sheet(self) -> list[dict]:
+        ws = self._find_cumulative_sheet()
+        if ws is None:
+            # 回退到从主 Sheet 自营行提取（精度较低）
+            return self._parse_cumulative_from_main()
+
+        records: list[dict] = []
+        data_start = None
+        # 找表头行（含 "周累计箱量" 或 "周累计"）
+        for row_idx in range(1, ws.max_row + 1):
+            for col_idx in range(1, ws.max_column + 1):
+                v = _cell(ws, row_idx, col_idx)
+                if v and "累计箱量" in str(v):
+                    data_start = row_idx + 1
+                    break
+            if data_start:
+                break
+
+        if data_start is None:
+            return self._parse_cumulative_from_main()
+
+        # 列映射：[1]机构名 [2]周累计箱量 [3]周累计量同比 [4]周累计产值(万) [5]周累计产值同比(万)
+        # 只读第一个连续数据块（自营机构 + 自营总计），遇到空行即停
+        for row_idx in range(data_start, ws.max_row + 1):
+            name_val = _cell(ws, row_idx, 1)
+            if not name_val:
+                if records:
+                    break  # 已有数据后遇到空行 → 第一段结束
+                continue
+            name_str = str(name_val).strip()
+            if not name_str or name_str in ("部门/单位", "环比增减"):
+                continue
+
+            cum_qty = _safe_int(_cell(ws, row_idx, 2))
+            cum_qty_yoy = _safe_int(_cell(ws, row_idx, 3))
+            cum_rev = _safe_float(_cell(ws, row_idx, 4))
+            cum_rev_yoy = _safe_float(_cell(ws, row_idx, 5))
+
+            if cum_qty == 0 and cum_rev == 0:
+                continue
+
+            records.append({
+                "year": self.year, "week": self.week,
+                "org_name": name_str, "org_code": _make_code(name_str),
+                "cum_qty": cum_qty,
+                "cum_qty_yoy": cum_qty_yoy,
+                "cum_revenue": cum_rev,
+                "cum_revenue_yoy": cum_rev_yoy,
+            })
+
+        self.row_counts["cumulative"] = len(records)
+        return records
+
+    def _parse_cumulative_from_main(self) -> list[dict]:
+        """回退方案：从主 Sheet 自营行 [27] 列取累计箱量。"""
+        ws = self._find_main_sheet()
+        if ws is None:
+            return []
+
+        records: list[dict] = []
+        in_self_zone = False
+
+        for row_idx in range(4, ws.max_row + 1):
+            a_val = _cell(ws, row_idx, 1)
+            if a_val and "网点明细" in str(a_val):
+                break
+
+            a_str = str(a_val).strip() if a_val else ""
+            if "自营" in a_str and "合作" not in a_str and "外包" not in a_str:
+                in_self_zone = True
+            elif "合作供应商" in a_str:
+                break
+
+            if not in_self_zone:
+                continue
+
+            b_val = _cell(ws, row_idx, 2)
+            if not b_val:
+                continue
+            b_str = str(b_val).strip()
+            if not b_str or b_str in ("部门/单位", "环比增减"):
+                continue
+            if any(kw in b_str for kw in ("自营总计", "外包总计", "自营外包总计")):
+                continue
+
+            org_name = b_str
+            cum_qty = _safe_int(_cell(ws, row_idx, 27))
+            if cum_qty > 0:
+                records.append({
+                    "year": self.year, "week": self.week,
+                    "org_name": org_name, "org_code": _make_code(org_name),
+                    "cum_qty": cum_qty, "cum_qty_yoy": 0,
+                    "cum_revenue": 0.0, "cum_revenue_yoy": 0.0,
+                })
+
+        self.row_counts["cumulative"] = len(records)
+        return records
+
     def _lookup_parent(self, site_name: str) -> dict:
         if site_name in self.site_registry:
             return self.site_registry[site_name]
@@ -368,58 +507,6 @@ class WeeklyExcelImporter:
             if site_name in key or key in site_name:
                 return val
         return {"company_type": "outsourced", "parent_name": "", "parent_code": ""}
-
-    # -- 解析自营2026周完成情况 --
-
-    def _parse_cumulative_sheet(self) -> list[dict]:
-        ws = self._find_sheet("周完成")
-        if ws is None:
-            ws = self._find_sheet("完成情况")
-        if ws is None:
-            return []
-
-        records: list[dict] = []
-        # 定位包含 "周累计箱量" 表头的行
-        header_row = None
-        for row_idx in range(1, ws.max_row + 1):
-            for col_idx in range(1, min(ws.max_column + 1, 10)):
-                v = _cell(ws, row_idx, col_idx)
-                if v and "周累计箱量" in str(v):
-                    header_row = row_idx
-                    break
-            if header_row:
-                break
-
-        if header_row is None:
-            return []
-
-        # 读取表头下方的数据行，直到空行或非目标行
-        for row_idx in range(header_row + 1, min(header_row + 10, ws.max_row + 1)):
-            a_val = _cell(ws, row_idx, 1)
-            if not a_val:
-                break
-            a_str = str(a_val).strip()
-            if a_str not in SELF_ORG_NAMES and a_str not in ("自营总计", "总计", "粤西", "北部湾"):
-                break
-
-            # 简称映射
-            name_map = {"粤西": "粤西运营中心", "北部湾": "北部湾运营中心"}
-            org_name = name_map.get(a_str, a_str)
-            org_code = _make_code(org_name)
-
-            records.append({
-                "year": self.year,
-                "week": self.week,
-                "org_name": org_name,
-                "org_code": org_code,
-                "cum_qty": _safe_int(_cell(ws, row_idx, 2)),
-                "cum_qty_yoy": _safe_int(_cell(ws, row_idx, 3)),
-                "cum_revenue": _safe_float(_cell(ws, row_idx, 4)),
-                "cum_revenue_yoy": _safe_float(_cell(ws, row_idx, 5)),
-            })
-
-        self.row_counts["cumulative"] = len(records)
-        return records
 
     def _get_yoy_year_week(self) -> tuple[int, int]:
         return self.year - 1, self.week - 1
@@ -450,8 +537,6 @@ async def import_weekly_excel(
 
     try:
         importer = WeeklyExcelImporter(file_path, year, week)
-
-        sites_data = importer._parse_network_sites_sheet()
         data = importer.parse_all()
 
         # 清除旧数据（幂等）
@@ -466,7 +551,7 @@ async def import_weekly_excel(
             )
 
         # 网点主数据 upsert
-        for s in sites_data:
+        for s in data["sites"]:
             existing = await db.execute(
                 select(RepairNetworkSite).where(
                     RepairNetworkSite.code == s["code"]
@@ -481,19 +566,12 @@ async def import_weekly_excel(
             else:
                 db.add(RepairNetworkSite(**s))
 
-        # 机构数据
         for r in data["orgs"]:
             db.add(RepairWeeklyOrg(**r))
-
-        # 汇总数据
         for r in data["summaries"]:
             db.add(RepairWeeklySummary(**r))
-
-        # 网点明细
         for r in data["site_details"]:
             db.add(RepairWeeklySiteDetail(**r))
-
-        # 累计数据
         for r in data["cumulative"]:
             db.add(RepairWeeklyCumulative(**r))
 

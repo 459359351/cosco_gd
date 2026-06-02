@@ -1,17 +1,17 @@
-# 本地开发：PostgreSQL(PostGIS) + Redis
+# 集装箱修理业务驾驶舱 — 完整部署
 # 启动：docker compose up -d
-# 连接串与 backend/.env.example 一致：postgres / postgres，库名 cosco_gd（首次启动自动建库）
+# 1Panel 管理：将此文件放在 /opt/1panel/docker/compose/cosco_gd/ 下
 
 services:
+  # ──────── 基础设施 ────────
   db:
     image: postgis/postgis:16-3.4
-    container_name: cosco_gd_postgres
+    container_name: cosco_gd_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: cosco_gd
-    ports:
-      - "5432:5432"
     volumes:
       - cosco_gd_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -19,17 +19,58 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - cosco_gd_net
 
   redis:
     image: redis:7-alpine
     container_name: cosco_gd_redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - cosco_gd_net
+
+  # ──────── 后端 API ────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cosco_gd_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres}@db:5432/cosco_gd
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: '["*"]'
+      AMAP_KEY: ${AMAP_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cosco_gd_net
+
+  # ──────── 前端 Nginx ────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cosco_gd_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - cosco_gd_net
 
 volumes:
   cosco_gd_pgdata:
+
+networks:
+  cosco_gd_net:
+    driver: bridge

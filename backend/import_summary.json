@@ -1,0 +1,26 @@
+{
+  "sheet1_total": 124,
+  "geocode_ok": 121,
+  "geocode_failed": 0,
+  "geocode_failed_sites": [],
+  "repair_sites": {
+    "inserted": 8,
+    "updated": 116,
+    "failed": 0,
+    "skipped": 0
+  },
+  "yards": {
+    "inserted": 0,
+    "updated": 34,
+    "failed": 0
+  },
+  "sheet2_total": 21,
+  "sheet2_matched": 20,
+  "sheet2_unmatched": 1,
+  "sheet2_unmatched_items": [
+    {
+      "name": "佛山高明珠江外包",
+      "code": "FSH03"
+    }
+  ]
+}

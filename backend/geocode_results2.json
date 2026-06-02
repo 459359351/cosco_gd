@@ -1,0 +1,108 @@
+[
+  {
+    "code": "深圳运营中心_汕头堆场",
+    "address": "汕头市濠江区广澳街道",
+    "lng": 116.764791,
+    "lat": 23.269736,
+    "province": "广东",
+    "city": "汕头",
+    "actual_province": "广东省",
+    "actual_city": "汕头市",
+    "formatted": "广东省汕头市濠江区广澳街道",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "深圳运营中心_汕头广澳",
+    "address": "汕头市濠江区广澳港区",
+    "lng": 116.767553,
+    "lat": 23.268286,
+    "province": "广东",
+    "city": "汕头",
+    "actual_province": "广东省",
+    "actual_city": "汕头市",
+    "formatted": "广东省汕头市濠江区广澳",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "南宁亿邦_广西梧州赤水港",
+    "address": "梧州市长洲区赤水村",
+    "lng": 111.274276,
+    "lat": 23.486279,
+    "province": "广西",
+    "city": "梧州",
+    "actual_province": "广西壮族自治区",
+    "actual_city": "梧州市",
+    "formatted": "广西壮族自治区梧州市长洲区",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州运营中心_惠州龙溪",
+    "address": "惠州市博罗县龙溪街道",
+    "failed": true
+  },
+  {
+    "code": "广州弘运_江门天马港",
+    "address": "江门市新会区天马村",
+    "lng": 113.046082,
+    "lat": 22.464926,
+    "province": "广东",
+    "city": "江门",
+    "actual_province": "广东省",
+    "actual_city": "江门市",
+    "formatted": "广东省江门市新会区天马村",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州弘运_新会亚太",
+    "address": "江门市新会区双水镇",
+    "lng": 113.003622,
+    "lat": 22.433522,
+    "province": "广东",
+    "city": "江门",
+    "actual_province": "广东省",
+    "actual_city": "江门市",
+    "formatted": "广东省江门市新会区双水镇",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州弘运_新会新港",
+    "address": "江门市新会区会城街道",
+    "lng": 113.032996,
+    "lat": 22.512227,
+    "province": "广东",
+    "city": "江门",
+    "actual_province": "广东省",
+    "actual_city": "江门市",
+    "formatted": "广东省江门市新会区会城街道",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "深圳运营中心_深圳大铲湾",
+    "address": "深圳市宝安区大铲湾",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_淡水河码头",
+    "address": "广州市增城区新塘镇",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_新沙港",
+    "address": "广州港新沙港区",
+    "lng": 113.538278,
+    "lat": 23.011238,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市广州港新沙港区",
+    "prov_ok": true,
+    "city_ok": true
+  }
+]

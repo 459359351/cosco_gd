@@ -1,0 +1,29 @@
+[
+  {
+    "code": "GOM03",
+    "name": "高明高荷码头",
+    "province": "广东",
+    "city": "佛山",
+    "lng": 112.922113,
+    "lat": 22.873527,
+    "company_type": "self"
+  },
+  {
+    "code": "GOM01",
+    "name": "高明珠江码头外包",
+    "province": "广东",
+    "city": "佛山",
+    "lng": 112.922113,
+    "lat": 22.873527,
+    "company_type": "outsourced"
+  },
+  {
+    "code": "GOM11",
+    "name": "佛山高明外堆场",
+    "province": "广东",
+    "city": "佛山",
+    "lng": 113.065858,
+    "lat": 23.116923,
+    "company_type": "self"
+  }
+]

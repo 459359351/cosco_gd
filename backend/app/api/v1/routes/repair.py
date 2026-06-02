@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.database import get_db
 from app.models.repair import (
     RepairNetworkSite,
@@ -99,8 +98,6 @@ async def get_repair_kpi(
         tp = summary_map.get(stype, {}).get("thirdparty")
         if not cosco:
             return RepairKpiBlock()
-        total_qty = cosco.container_qty + (tp.container_qty if tp else 0)
-        total_rev = cosco.revenue + (tp.revenue if tp else 0)
         return RepairKpiBlock(
             container_qty=cosco.container_qty,
             qty_wow=cosco.qty_wow_change,
@@ -111,14 +108,37 @@ async def get_repair_kpi(
     result.self_ = _build_block("self_total")
     result.outsourced = _build_block("outsourced_total")
 
-    tp_cosco = summary_map.get("combined_total", {}).get("cosco")
-    tp_third = summary_map.get("combined_total", {}).get("thirdparty")
-    if tp_third:
-        total_all = (tp_cosco.container_qty if tp_cosco else 0) + tp_third.container_qty
+    # combined_total: cosco = 全部中远海, thirdparty = 全部第三方
+    combined_cosco = summary_map.get("combined_total", {}).get("cosco")
+    combined_third = summary_map.get("combined_total", {}).get("thirdparty")
+
+    if combined_cosco:
+        result.cosco = RepairKpiBlock(
+            container_qty=combined_cosco.container_qty,
+            qty_wow=combined_cosco.qty_wow_change,
+            revenue=combined_cosco.revenue,
+            rev_wow=combined_cosco.rev_wow_change,
+            unit_price=combined_cosco.unit_price,
+        )
+
+    if combined_third:
         result.thirdparty = RepairKpiBlock(
-            container_qty=tp_third.container_qty,
-            revenue=tp_third.revenue,
-            pct_qty=round(tp_third.container_qty / total_all * 100, 1) if total_all else 0,
+            container_qty=combined_third.container_qty,
+            qty_wow=combined_third.qty_wow_change,
+            revenue=combined_third.revenue,
+            rev_wow=combined_third.rev_wow_change,
+            unit_price=combined_third.unit_price,
+        )
+
+    if combined_cosco and combined_third:
+        total_qty = combined_cosco.container_qty + combined_third.container_qty
+        total_rev = combined_cosco.revenue + combined_third.revenue
+        result.total = RepairKpiBlock(
+            container_qty=total_qty,
+            qty_wow=combined_cosco.qty_wow_change + combined_third.qty_wow_change,
+            revenue=total_rev,
+            rev_wow=combined_cosco.rev_wow_change + combined_third.rev_wow_change,
+            unit_price=round(total_rev / total_qty, 2) if total_qty else 0,
         )
 
     # 同比: 查找 2025 年第 19 周数据
