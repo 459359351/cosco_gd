@@ -13,10 +13,12 @@ defineProps<{ title: string }>();
 .panel-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px 6px;
+  gap: max(6px, 0.52vw);
+  padding: max(5px, 0.93vh) max(8px, 0.62vw) max(3px, 0.56vh);
   color: #9be7ff;
   font-weight: 600;
+  font-size: clamp(12px, 0.83vw, 16px);
+  flex-shrink: 0;
 }
 .line {
   flex: 1;

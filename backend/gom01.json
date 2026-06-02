@@ -1,0 +1,13 @@
+{
+  "id": 230,
+  "name": "高明珠江码头外包",
+  "code": "GOM01",
+  "company_type": "outsourced",
+  "parent_name": "珠三角运营中心",
+  "parent_code": "珠三角运营中心",
+  "province": "广东",
+  "city": "佛山",
+  "lng": 112.922113,
+  "lat": 22.873527,
+  "status": "active"
+}

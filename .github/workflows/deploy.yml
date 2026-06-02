@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ──────── CI：前端构建检查 ────────
+      - name: Setup Node
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install & Build Frontend
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      # ──────── CD：通过 1Panel API 部署 ────────
+      # 1Panel 在「面板设置 → API 接口」中开启，生成 API Key
+      # 将以下值存入 GitHub Secrets：
+      #   1PANEL_URL     → 如 https://your-server:端口
+      #   1PANEL_KEY     → API 密钥
+      #   DEPLOY_PATH    → 如 /opt/1panel/docker/compose/cosco_gd
+
+      - name: 部署到服务器（1Panel API）
+        env:
+          1P_URL: ${{ secrets.1PANEL_URL }}
+          1P_KEY: ${{ secrets.1PANEL_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          # 1. 获取 1Panel API Token
+          TOKEN=$(curl -s -X POST "$1P_URL/api/v1/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"key\":\"$1P_KEY\"}" | jq -r '.data.token')
+
+          if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+            echo "❌ 1Panel 认证失败"
+            exit 1
+          fi
+          echo "✅ 1Panel 认证成功"
+
+          # 2. 触发 Compose 项目更新
+          RESULT=$(curl -s -X POST "$1P_URL/api/v1/apps/update" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"path\": \"$DEPLOY_PATH\",
+              \"pull\": true,
+              \"build\": true
+            }")
+
+          echo "$RESULT"
+
+          # 3. 检查结果
+          SUCCESS=$(echo "$RESULT" | jq -r '.code // empty')
+          if [ "$SUCCESS" = "200" ] || [ "$SUCCESS" = "0" ]; then
+            echo "✅ 部署成功"
+          else
+            echo "⚠️ API 返回异常，请到 1Panel 面板手动检查"
+            echo "$RESULT" | jq .
+          fi

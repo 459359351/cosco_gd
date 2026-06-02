@@ -8,33 +8,85 @@
         {{ store.selectedParent }} — 下属网点明细
         <button class="back-btn" @click="clearDrilldown">返回</button>
       </div>
-      <div class="site-list">
-        <div v-for="item in store.siteDetails" :key="item.site_name" class="site-row">
-          <span class="site-name">{{ item.site_name }}</span>
-          <span class="site-bar-wrap">
-            <span class="site-bar" :style="{ width: item.pct + '%' }" />
-          </span>
-          <span class="site-value">{{ formatWan(item.approved_amount) }}万</span>
-          <span class="site-pct">{{ item.pct }}%</span>
-        </div>
+      <div class="site-list" ref="listRef">
+        <!-- 列表重复两次实现无缝循环 -->
+        <template v-for="round in 2" :key="round">
+          <div v-for="item in store.siteDetails" :key="round + '-' + item.site_name" class="site-row">
+            <span class="site-name">{{ item.site_name }}</span>
+            <span class="site-bar-wrap">
+              <span class="site-bar" :style="{ width: item.pct + '%' }" />
+            </span>
+            <span class="site-value">{{ formatWan(item.approved_amount) }}万</span>
+            <span class="site-pct">{{ item.pct }}%</span>
+          </div>
+        </template>
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { nextTick, onBeforeUnmount, ref, watch } from "vue";
+
 import { useRepairStore } from "@/store/repair";
 
 const store = useRepairStore();
+const listRef = ref<HTMLElement | null>(null);
+let scrollRaf: number | null = null;
 
 function clearDrilldown() {
-  store.selectedParent = null;
-  store.siteDetails = [];
+  store.clearDrilldown();
 }
 
 function formatWan(n: number) {
   return (n / 10000).toFixed(2);
 }
+
+function startAutoScroll() {
+  stopAutoScroll();
+  const list = listRef.value;
+  if (!list) return;
+  list.scrollTop = 0;
+  const speed = 0.25;
+  let acc = 0;
+
+  const step = () => {
+    if (!list) return;
+    acc += speed;
+    if (acc >= 1) {
+      acc -= 1;
+      // 列表内容重复了两遍，滚到一半时回到顶部实现无缝循环
+      const halfH = list.scrollHeight / 2;
+      list.scrollTop += 1;
+      if (list.scrollTop >= halfH) {
+        list.scrollTop = 0;
+      }
+    }
+    scrollRaf = requestAnimationFrame(step);
+  };
+  scrollRaf = requestAnimationFrame(step);
+}
+
+function stopAutoScroll() {
+  if (scrollRaf !== null) {
+    cancelAnimationFrame(scrollRaf);
+    scrollRaf = null;
+  }
+}
+
+watch(
+  () => store.siteDetails,
+  async () => {
+    stopAutoScroll();
+    await nextTick();
+    startAutoScroll();
+  },
+  { deep: true },
+);
+
+onBeforeUnmount(() => {
+  stopAutoScroll();
+});
 </script>
 
 <style scoped lang="scss">
@@ -58,7 +110,7 @@ function formatWan(n: number) {
   align-items: center;
   font-size: 13px;
   color: #00d4ff;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .back-btn {
   font-size: 11px;
@@ -72,6 +124,10 @@ function formatWan(n: number) {
 .site-list {
   flex: 1;
   overflow: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 .site-row {
   display: flex;

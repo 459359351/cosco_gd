@@ -1,0 +1,260 @@
+[
+  {
+    "code": "浚得兴_华津码头",
+    "address": "佛山市高明区华津码头",
+    "lng": 112.892573,
+    "lat": 22.900047,
+    "province": "广东",
+    "city": "佛山",
+    "actual_province": "广东省",
+    "actual_city": "佛山市",
+    "formatted": "广东省佛山市高明区",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "珠三角运营中心_佛山南鲲",
+    "address": "佛山市南海区南鲲码头",
+    "lng": 112.923392,
+    "lat": 22.86843,
+    "province": "广东",
+    "city": "佛山",
+    "actual_province": "广东省",
+    "actual_city": "佛山市",
+    "formatted": "广东省佛山市南海区南鲲码头",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "弘运天浩_莲花山",
+    "address": "广州市番禺区莲花山港",
+    "lng": 113.501994,
+    "lat": 22.969379,
+    "province": "广东",
+    "city": "广州",
+    "actual_province": "广东省",
+    "actual_city": "广州市",
+    "formatted": "广东省广州市番禺区莲花山港",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "本港_炭步新港",
+    "address": "广州市花都区炭步镇",
+    "lng": 113.106055,
+    "lat": 23.342031,
+    "province": "广东",
+    "city": "广州",
+    "actual_province": "广东省",
+    "actual_city": "广州市",
+    "formatted": "广东省广州市花都区炭步镇",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "深圳运营中心_汕头国集",
+    "address": "汕头港国际集装箱码头",
+    "lng": 116.778931,
+    "lat": 23.226702,
+    "province": "广东",
+    "city": "汕头",
+    "actual_province": "广东省",
+    "actual_city": "汕头市",
+    "formatted": "广东省汕头市濠江区汕头国际集装箱码头",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "深圳运营中心_汕头堆场",
+    "address": "汕头港集装箱堆场",
+    "failed": true
+  },
+  {
+    "code": "深圳运营中心_汕头广澳",
+    "address": "汕头广澳港区",
+    "failed": true
+  },
+  {
+    "code": "北部湾运营中心_防城港外堆场",
+    "address": "防城港外堆场",
+    "lng": 108.35467,
+    "lat": 21.686732,
+    "province": "广西",
+    "city": "防城港",
+    "actual_province": "广西壮族自治区",
+    "actual_city": "防城港市",
+    "formatted": "广西壮族自治区防城港市",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "北部湾运营中心_防城港二堆场",
+    "address": "防城港第二堆场",
+    "lng": 108.35467,
+    "lat": 21.686732,
+    "province": "广西",
+    "city": "防城港",
+    "actual_province": "广西壮族自治区",
+    "actual_city": "防城港市",
+    "formatted": "广西壮族自治区防城港市",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "北部湾运营中心_广西钦州港自营",
+    "address": "钦州港",
+    "lng": 108.608294,
+    "lat": 21.742923,
+    "province": "广西",
+    "city": "钦州",
+    "actual_province": "广西壮族自治区",
+    "actual_city": "钦州市",
+    "formatted": "广西壮族自治区钦州市钦南区钦州港",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "南宁亿邦_广西梧州赤水港",
+    "address": "梧州赤水港",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_惠州龙溪",
+    "address": "惠州市博罗县龙溪镇",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_虎门一期",
+    "address": "东莞市虎门港",
+    "lng": 113.686315,
+    "lat": 22.844829,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市虎门港",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州弘运_三水新港",
+    "address": "佛山市三水区三水新港",
+    "lng": 112.901531,
+    "lat": 23.176031,
+    "province": "广东",
+    "city": "佛山",
+    "actual_province": "广东省",
+    "actual_city": "佛山市",
+    "formatted": "广东省佛山市三水区三水(公交站)",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州弘运_东莞石龙",
+    "address": "东莞市石龙镇石龙港",
+    "lng": 113.885958,
+    "lat": 22.98112,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市石龙镇石龙村",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州弘运_江门天马港",
+    "address": "江门市新会区天马港",
+    "failed": true
+  },
+  {
+    "code": "广州弘运_新会亚太",
+    "address": "江门市新会区亚太纸业",
+    "failed": true
+  },
+  {
+    "code": "广州弘运_新会新港",
+    "address": "江门市新会区新会港",
+    "failed": true
+  },
+  {
+    "code": "浚得兴_东莞鹏成码头",
+    "address": "东莞市鹏成码头",
+    "lng": 113.751884,
+    "lat": 23.021016,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "珠三角运营中心_贵阳陆港铁路场",
+    "address": "贵阳市陆港型国家物流枢纽",
+    "lng": 106.566382,
+    "lat": 26.869843,
+    "province": "贵州",
+    "city": "贵阳",
+    "actual_province": "贵州省",
+    "actual_city": "贵阳市",
+    "formatted": "贵州省贵阳市修文县修文枢纽",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "裕丰_广西名燕",
+    "address": "南宁市名燕特种水泥",
+    "lng": 108.366407,
+    "lat": 22.8177,
+    "province": "广西",
+    "city": "南宁",
+    "actual_province": "广西壮族自治区",
+    "actual_city": "南宁市",
+    "formatted": "广西壮族自治区南宁市",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "深圳运营中心_深圳大铲湾",
+    "address": "深圳市大铲湾码头",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_淡水河码头",
+    "address": "广州市增城区新塘镇淡水河码头",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_新沙港",
+    "address": "东莞市麻涌镇新沙港",
+    "failed": true
+  },
+  {
+    "code": "广州运营中心_虎门二期码头",
+    "address": "东莞市虎门港",
+    "lng": 113.686315,
+    "lat": 22.844829,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市虎门港",
+    "prov_ok": true,
+    "city_ok": true
+  },
+  {
+    "code": "广州运营中心_虎门三期码头",
+    "address": "东莞市虎门港",
+    "lng": 113.686315,
+    "lat": 22.844829,
+    "province": "广东",
+    "city": "东莞",
+    "actual_province": "广东省",
+    "actual_city": "东莞市",
+    "formatted": "广东省东莞市虎门港",
+    "prov_ok": true,
+    "city_ok": true
+  }
+]
