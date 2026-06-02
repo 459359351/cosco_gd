@@ -19,6 +19,7 @@ export interface RepairKpiBlock {
   rev_wow: number;
   qty_yoy: number | null;
   rev_yoy: number | null;
+  unit_price?: number;
 }
 
 export interface OrgRankItem {

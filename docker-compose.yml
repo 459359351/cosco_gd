@@ -1,5 +1,6 @@
 # 集装箱修理业务驾驶舱 — 完整部署
 # 启动：docker compose up -d
+# 配置：复制 .env.example 为 .env 并按需修改
 # 1Panel 管理：将此文件放在 /opt/1panel/docker/compose/cosco_gd/ 下
 
 services:
@@ -45,7 +46,6 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres}@db:5432/cosco_gd
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: '["*"]'
-      AMAP_KEY: ${AMAP_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -59,6 +59,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SECURITY: ${VITE_AMAP_SECURITY:-}
+        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
     container_name: cosco_gd_frontend
     restart: unless-stopped
     ports:

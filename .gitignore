@@ -21,9 +21,9 @@ frontend/node_modules/
 Thumbs.db
 .DS_Store
 
-# Env
-.env
-.env.*
+# Env（私有仓库，.env 直接跟踪）
+# 如需公开仓库，改为忽略 .env 并使用 .env.example
+
 
 # Playwright MCP
 .playwright-mcp/

@@ -1,11 +1,14 @@
 #!/bin/bash
 set -e
 
+# asyncpg.connect() 只接受 postgresql:// 格式，不接受 postgresql+asyncpg://
+DB_URL_FOR_CHECK="${DATABASE_URL/postgresql+asyncpg:/postgresql:}"
+
 echo "[entrypoint] 等待数据库就绪..."
 until python -c "
 import asyncio, asyncpg
 async def check():
-    conn = await asyncpg.connect('${DATABASE_URL}')
+    conn = await asyncpg.connect('${DB_URL_FOR_CHECK}')
     await conn.close()
 asyncio.run(check())
 " 2>/dev/null; do
