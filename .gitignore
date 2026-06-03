@@ -31,3 +31,4 @@ Thumbs.db
 # Screenshots
 *.png
 !frontend/public/**/*.png
+cosco_gd_images.tar
