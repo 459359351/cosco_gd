@@ -35,6 +35,7 @@ export interface NetworkSite {
   city: string;
   lng: number;
   lat: number;
+  distance: number;
   status: string;
 }
 

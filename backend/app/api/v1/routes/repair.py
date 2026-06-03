@@ -24,21 +24,22 @@ from app.schemas.repair import (
 router = APIRouter(tags=["repair"])
 
 
-@router.get("/network-sites", response_model=list[NetworkSiteItem])
+@router.get("/network-sites")
 async def get_network_sites(db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(select(RepairNetworkSite))).scalars().all()
     return [
-        NetworkSiteItem(
-            name=r.name,
-            code=r.code,
-            company_type=r.company_type,
-            parent_name=r.parent_name,
-            province=r.province,
-            city=r.city,
-            lng=r.lng,
-            lat=r.lat,
-            status=r.status,
-        )
+        {
+            "name": r.name,
+            "code": r.code,
+            "company_type": r.company_type,
+            "parent_name": r.parent_name,
+            "province": r.province,
+            "city": r.city,
+            "lng": r.lng,
+            "lat": r.lat,
+            "distance": r.distance or 0,
+            "status": r.status,
+        }
         for r in rows
     ]
 

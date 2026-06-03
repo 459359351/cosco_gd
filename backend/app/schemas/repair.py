@@ -71,4 +71,5 @@ class NetworkSiteItem(BaseModel):
     city: str = ""
     lng: float = 0.0
     lat: float = 0.0
+    distance: float = 0.0
     status: str = ""

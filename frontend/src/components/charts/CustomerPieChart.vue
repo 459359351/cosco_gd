@@ -1,24 +1,19 @@
 <template>
   <div class="customer-pie">
-    <div class="pie-header">
-      <span>客户类型占比</span>
-      <div class="metric-switch">
-        <button :class="{ active: metric === 'revenue' }" @click="metric = 'revenue'">收入</button>
-        <button :class="{ active: metric === 'qty' }" @click="metric = 'qty'">箱量</button>
+    <div class="pie-dual">
+      <div class="pie-half">
+        <div class="pie-half-title">收入占比</div>
+        <div class="pie-half-body" ref="chartRefRev" />
+      </div>
+      <div class="pie-half">
+        <div class="pie-half-title">箱量占比</div>
+        <div class="pie-half-body" ref="chartRefQty" />
       </div>
     </div>
-    <div class="pie-content">
-      <div class="pie-body" ref="chartRef" />
-      <div class="pie-legend">
-        <div
-          v-for="item in pieData"
-          :key="item.name"
-          class="legend-item"
-        >
-          <span class="legend-dot" :style="{ background: item.color }" />
-          <span class="legend-name">{{ item.name }}</span>
-          <span class="legend-pct">{{ item.pct }}%</span>
-        </div>
+    <div class="pie-legend-shared">
+      <div v-for="item in legendData" :key="item.name" class="legend-item">
+        <span class="legend-dot" :style="{ background: item.color }" />
+        <span class="legend-name">{{ item.name }}</span>
       </div>
     </div>
   </div>
@@ -31,9 +26,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRepairStore } from "@/store/repair";
 
 const store = useRepairStore();
-const chartRef = ref<HTMLElement>();
-let chart: echarts.ECharts | null = null;
-const metric = ref<"revenue" | "qty">("revenue");
+const chartRefRev = ref<HTMLElement>();
+const chartRefQty = ref<HTMLElement>();
+let chartRev: echarts.ECharts | null = null;
+let chartQty: echarts.ECharts | null = null;
 
 const colors: Record<string, string> = {
   cosco: "#00d4ff",
@@ -45,46 +41,37 @@ const labels: Record<string, string> = {
   thirdparty: "第三方",
 };
 
-const pieData = computed(() => {
-  return store.customerDist.map((d) => ({
+const legendData = computed(() =>
+  store.customerDist.map((d) => ({
     name: labels[d.customer_type] || d.customer_type,
-    value: metric.value === "revenue" ? d.revenue : d.container_qty,
-    pct: metric.value === "revenue" ? d.pct_rev : d.pct_qty,
     color: colors[d.customer_type] || "#999",
-  }));
-});
+  })),
+);
 
-function render() {
-  if (!chart || !chartRef.value) return;
-  const w = chartRef.value.clientWidth;
-  const h = chartRef.value.clientHeight;
-  // 基于容器最小尺寸计算字体，确保标签在任意分辨率下不溢出
-  const labelFont = Math.max(9, Math.min(12, Math.round(Math.min(w, h) / 26)));
-  chart.setOption({
-    tooltip: {
-      trigger: "item",
-      formatter: "{b}: {c} ({d}%)",
-    },
+function renderRev() {
+  if (!chartRev || !chartRefRev.value) return;
+  const data = store.customerDist.map((d) => ({
+    name: labels[d.customer_type] || d.customer_type,
+    value: d.revenue,
+    itemStyle: { color: colors[d.customer_type] || "#999" },
+  }));
+  chartRev.setOption({
+    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
     series: [
       {
         type: "pie",
-        radius: ["30%", "42%"],
-        center: ["40%", "50%"],
-        data: pieData.value.map((d) => ({
-          name: d.name,
-          value: d.value,
-          itemStyle: { color: d.color },
-        })),
+        radius: ["22%", "80%"],
+        center: ["50%", "48%"],
+        data,
         label: {
-          color: "#a7fbff",
-          fontSize: labelFont,
-          formatter: "{b}  {d}%",
+          show: true,
+          position: "inside",
+          formatter: "{d}%",
+          fontSize: 12,
+          color: "#fff",
+          fontWeight: 700,
         },
-        labelLine: {
-          length: Math.max(8, Math.round(w * 0.035)),
-          length2: Math.max(4, Math.round(w * 0.04)),
-          lineStyle: { color: "rgba(57, 216, 255, 0.4)" },
-        },
+        labelLine: { show: false },
         emphasis: {
           itemStyle: { shadowBlur: 10, shadowColor: "rgba(0, 0, 0, 0.5)" },
         },
@@ -93,24 +80,67 @@ function render() {
   });
 }
 
-watch(pieData, () => nextTick(render));
-watch(metric, () => nextTick(render));
+function renderQty() {
+  if (!chartQty || !chartRefQty.value) return;
+  const data = store.customerDist.map((d) => ({
+    name: labels[d.customer_type] || d.customer_type,
+    value: d.container_qty,
+    itemStyle: { color: colors[d.customer_type] || "#999" },
+  }));
+  chartQty.setOption({
+    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+    series: [
+      {
+        type: "pie",
+        radius: ["22%", "80%"],
+        center: ["50%", "48%"],
+        data,
+        label: {
+          show: true,
+          position: "inside",
+          formatter: "{d}%",
+          fontSize: 12,
+          color: "#fff",
+          fontWeight: 700,
+        },
+        labelLine: { show: false },
+        emphasis: {
+          itemStyle: { shadowBlur: 10, shadowColor: "rgba(0, 0, 0, 0.5)" },
+        },
+      },
+    ],
+  });
+}
+
+function renderAll() {
+  nextTick(() => {
+    renderRev();
+    renderQty();
+  });
+}
+
+watch(() => store.customerDist, renderAll, { deep: true });
 
 function onResize() {
-  chart?.resize();
+  chartRev?.resize();
+  chartQty?.resize();
 }
 
 onMounted(() => {
-  if (chartRef.value) {
-    chart = echarts.init(chartRef.value);
-    render();
+  if (chartRefRev.value) {
+    chartRev = echarts.init(chartRefRev.value);
   }
+  if (chartRefQty.value) {
+    chartQty = echarts.init(chartRefQty.value);
+  }
+  renderAll();
   window.addEventListener("resize", onResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener("resize", onResize);
-  chart?.dispose();
+  chartRev?.dispose();
+  chartQty?.dispose();
 });
 </script>
 
@@ -119,59 +149,44 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: max(2px, 0.28vh) max(6px, 0.42vw);
+  padding: max(2px, 0.28vh) max(4px, 0.3vw);
 }
-.pie-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: clamp(11px, 0.68vw, 13px);
-  color: #a7fbff;
-  margin-bottom: 0;
-  flex-shrink: 0;
-}
-.metric-switch {
-  display: flex;
-  gap: max(1px, 0.1vw);
-  button {
-    padding: max(1px, 0.19vh) max(4px, 0.42vw);
-    font-size: clamp(10px, 0.57vw, 12px);
-    border: 1px solid rgba(57, 216, 255, 0.3);
-    background: transparent;
-    color: rgba(168, 201, 255, 0.5);
-    border-radius: 3px;
-    cursor: pointer;
-    &.active {
-      background: rgba(0, 212, 255, 0.15);
-      color: #00d4ff;
-    }
-  }
-}
-.pie-content {
+.pie-dual {
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: row;
+  gap: max(4px, 0.4vw);
   min-height: 0;
 }
-.pie-body {
-  flex: 1.2;
-  height: 100%;
-  min-height: 0;
-  overflow: visible;
-}
-.pie-legend {
+.pie-half {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+.pie-half-title {
+  font-size: clamp(10px, 0.65vw, 12px);
+  color: #78c9ff;
+  text-align: center;
+  flex-shrink: 0;
+  margin-bottom: max(2px, 0.2vh);
+}
+.pie-half-body {
+  flex: 1;
+  min-height: 0;
+}
+.pie-legend-shared {
+  display: flex;
   justify-content: center;
-  gap: max(10px, 1.5vh);
-  padding-right: max(6px, 0.5vw);
+  gap: max(16px, 2vw);
+  padding: max(4px, 0.4vh) 0;
+  flex-shrink: 0;
 }
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: clamp(10px, 0.7vw, 13px);
+  gap: 6px;
+  font-size: clamp(11px, 0.75vw, 13px);
 }
 .legend-dot {
   width: 10px;
@@ -180,12 +195,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .legend-name {
-  color: rgba(168, 201, 255, 0.75);
-  flex: 1;
-}
-.legend-pct {
-  color: #e0f0ff;
-  font-weight: 700;
-  font-size: clamp(12px, 0.9vw, 15px);
+  color: rgba(168, 201, 255, 0.8);
 }
 </style>

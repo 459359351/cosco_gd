@@ -9,7 +9,7 @@
           <span class="kpi-unit">万元</span>
         </div>
       </div>
-      <div class="kpi-sub">
+      <div class="kpi-sub kpi-sub-col">
         <span>箱量 {{ formatNum(totalQty) }} 个</span>
         <span>单箱 ¥{{ formatNum(unitPrice) }}</span>
       </div>
@@ -48,7 +48,9 @@
       <div class="kpi-inline">
         <span class="kpi-label">箱量</span>
         <span class="kpi-value-sm">{{ formatNum(coscoQty) }}<span class="kpi-unit">个</span></span>
-        <span class="kpi-label" style="margin-left: 6px">单箱</span>
+      </div>
+      <div class="kpi-inline">
+        <span class="kpi-label">单箱</span>
         <span class="kpi-value-sm">¥{{ formatNum(coscoUnit) }}</span>
       </div>
     </div>
@@ -66,7 +68,9 @@
       <div class="kpi-inline">
         <span class="kpi-label">箱量</span>
         <span class="kpi-value-sm">{{ formatNum(thirdQty) }}<span class="kpi-unit">个</span></span>
-        <span class="kpi-label" style="margin-left: 6px">单箱</span>
+      </div>
+      <div class="kpi-inline">
+        <span class="kpi-label">单箱</span>
         <span class="kpi-value-sm">¥{{ formatNum(thirdUnit) }}</span>
       </div>
     </div>
@@ -203,6 +207,10 @@ function formatPct(n: number) {
   margin-top: max(2px, 0.3vh);
   font-size: clamp(9px, 0.6vw, 12px);
   color: rgba(168, 201, 255, 0.6);
+}
+.kpi-sub-col {
+  flex-direction: column;
+  gap: 1px;
 }
 .kpi-trend {
   font-size: clamp(10px, 0.7vw, 13px);

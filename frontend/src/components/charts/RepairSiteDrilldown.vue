@@ -6,13 +6,13 @@
     <template v-else>
       <div class="drilldown-title">
         {{ store.selectedParent }} — 下属网点明细
-        <button class="back-btn" @click="clearDrilldown">返回</button>
       </div>
       <div class="site-list" ref="listRef">
         <!-- 列表重复两次实现无缝循环 -->
         <template v-for="round in 2" :key="round">
           <div v-for="item in store.siteDetails" :key="round + '-' + item.site_name" class="site-row">
             <span class="site-name">{{ item.site_name }}</span>
+            <span class="site-distance">{{ formatDistance(store.siteDistances[item.site_name]) }}</span>
             <span class="site-bar-wrap">
               <span class="site-bar" :style="{ width: item.pct + '%' }" />
             </span>
@@ -40,6 +40,12 @@ function clearDrilldown() {
 
 function formatWan(n: number) {
   return (n / 10000).toFixed(2);
+}
+
+function formatDistance(meters: number | undefined) {
+  if (meters == null) return "—";
+  if (meters >= 1000) return (meters / 1000).toFixed(1) + "km";
+  return Math.round(meters) + "m";
 }
 
 function startAutoScroll() {
@@ -112,15 +118,6 @@ onBeforeUnmount(() => {
   color: #00d4ff;
   margin-bottom: 6px;
 }
-.back-btn {
-  font-size: 11px;
-  padding: 2px 8px;
-  border: 1px solid rgba(57, 216, 255, 0.3);
-  background: transparent;
-  color: rgba(168, 201, 255, 0.7);
-  border-radius: 3px;
-  cursor: pointer;
-}
 .site-list {
   flex: 1;
   overflow: auto;
@@ -136,12 +133,19 @@ onBeforeUnmount(() => {
   padding: 4px 2px;
 }
 .site-name {
-  width: 100px;
+  width: 90px;
   font-size: 12px;
   color: #a7fbff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.site-distance {
+  width: 55px;
+  text-align: right;
+  font-size: 11px;
+  color: rgba(168, 201, 255, 0.65);
+  white-space: nowrap;
 }
 .site-bar-wrap {
   flex: 1;

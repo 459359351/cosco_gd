@@ -126,6 +126,7 @@ class RepairNetworkSite(Base):
     city: Mapped[str] = mapped_column(String(40), default="")
     lng: Mapped[float] = mapped_column(Float, default=0)
     lat: Mapped[float] = mapped_column(Float, default=0)
+    distance: Mapped[float] = mapped_column(Float, default=0)
     status: Mapped[str] = mapped_column(String(20), default="active")
 
 

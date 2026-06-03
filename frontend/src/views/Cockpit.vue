@@ -14,12 +14,7 @@
       </div>
     </template>
 
-    <template #left-bottom>
-      <div class="slot-col">
-        <PanelTitle title="累计修理排名" />
-        <div class="slot-body"><CumulativeRankChart /></div>
-      </div>
-    </template>
+    <template #left-bottom></template>
 
     <template #center>
       <div v-if="showAdmin" class="toolbar">
@@ -44,10 +39,18 @@
     </template>
 
     <template #footer>
-      <div class="cockpit-footer-inner">
-        <PanelTitle title="修理业务机构排名" />
-        <div class="cockpit-footer-table">
-          <RepairOrgTable />
+      <div class="footer-left">
+        <div class="slot-col">
+          <PanelTitle title="累计修理排名" />
+          <div class="slot-body"><CumulativeRankChart /></div>
+        </div>
+      </div>
+      <div class="footer-right">
+        <div class="cockpit-footer-inner">
+          <PanelTitle title="修理业务机构排名" />
+          <div class="cockpit-footer-table">
+            <RepairOrgTable />
+          </div>
         </div>
       </div>
     </template>
@@ -115,6 +118,15 @@ onMounted(() => {
 .cockpit-footer-table {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.footer-left,
+.footer-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 

@@ -78,8 +78,13 @@ export const useRepairStore = defineStore("repair", () => {
   const cumulative = ref<any[]>([]);
   const sites = ref<NetworkSite[]>([]);
 
+  /* ---------- 站点到本部导航距离（米） ---------- */
+  const siteDistances = ref<Record<string, number>>({});
+  const parentDistances = ref<Record<string, number>>({});
+  const hqLngLat = ref<[number, number] | null>(null);
+
   /* ---------- 地图统一状态 ---------- */
-  const viewMode = ref<MapViewMode>("aggregate");
+  const viewMode = ref<MapViewMode>("drilldown");
   const companyFilter = ref<CompanyFilter>("all");
   const renderMode = ref<MapRenderMode>("point");
   const regionFilter = ref<RegionFilter>("all");
@@ -154,6 +159,9 @@ export const useRepairStore = defineStore("repair", () => {
     customerDist,
     cumulative,
     sites,
+    siteDistances,
+    parentDistances,
+    hqLngLat,
     viewMode,
     companyFilter,
     renderMode,

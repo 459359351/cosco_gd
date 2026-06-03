@@ -50,11 +50,6 @@
       </button>
     </div>
 
-    <!-- 钻取返回 -->
-    <div v-if="repairStore.viewMode === 'drilldown'" class="back-btn">
-      <button @click="backToAggregate">← 返回聚合</button>
-    </div>
-
     <!-- 当前选中信息 -->
     <div v-if="repairStore.selectedParent" class="drilldown-info">
       {{ repairStore.selectedParent }} — {{ drilldownSites.length }} 个网点
@@ -93,6 +88,8 @@ const regionOptions = [
   { label: "全部", value: "all" },
   { label: "广东", value: "guangdong" },
   { label: "广西", value: "guangxi" },
+  { label: "云南", value: "yunnan" },
+  { label: "贵州", value: "guizhou" },
 ];
 
 /* ---------- 高德地图实例 ---------- */
@@ -120,6 +117,8 @@ const filteredSites = () => {
   const sites = validSites();
   if (repairStore.regionFilter === "guangdong") return sites.filter((s) => s.province === "广东");
   if (repairStore.regionFilter === "guangxi") return sites.filter((s) => s.province === "广西");
+  if (repairStore.regionFilter === "yunnan") return sites.filter((s) => s.province === "云南");
+  if (repairStore.regionFilter === "guizhou") return sites.filter((s) => s.province === "贵州");
   return sites;
 };
 
@@ -227,6 +226,7 @@ interface AggregateItem {
   companyType: string;
   qtyWow: number;
   siteCount: number;
+  distance: number;
 }
 
 const aggregateData = computed((): AggregateItem[] => {
@@ -252,8 +252,10 @@ const aggregateData = computed((): AggregateItem[] => {
     const qty = org?.container_qty || groupSites.length * 50;
     const revenue = org?.revenue || 0;
     const qtyWow = org?.qty_wow || 0;
+    // 取该组网点中最小的距离作为聚合距离
+    const distance = Math.min(...groupSites.map((s) => s.distance || Infinity)) || 0;
 
-    return { parentName, lat, lng, qty, revenue, companyType, qtyWow, siteCount: groupSites.length };
+    return { parentName, lat, lng, qty, revenue, companyType, qtyWow, siteCount: groupSites.length, distance };
   });
 });
 
@@ -279,8 +281,14 @@ const markerColor = (type: string) => (type === "self" ? "#3b82f6" : "#f97316");
 const alertColor = "#ff4757";
 const thirdColor = "#2ecc71";
 
+function formatDistHtml(meters: number | undefined): string {
+  if (meters == null) return "";
+  const text = meters >= 1000 ? (meters / 1000).toFixed(1) + "km" : Math.round(meters) + "m";
+  return `<div class="bubble-dist">${text}</div>`;
+}
+
 /* ---------- HTML 生成辅助 ---------- */
-function aggregateBubbleHtml(item: AggregateItem, dx: number, dy: number) {
+function aggregateBubbleHtml(item: AggregateItem, dx: number, dy: number, distance?: number) {
   const isAlert = item.qtyWow < 0;
   const color = isAlert ? alertColor : markerColor(item.companyType);
   const lineLen = Math.sqrt(dx * dx + dy * dy).toFixed(1);
@@ -293,6 +301,7 @@ function aggregateBubbleHtml(item: AggregateItem, dx: number, dy: number) {
       <div class="bubble-body">
         <div class="bubble-name">${item.parentName}</div>
         <div class="bubble-qty">${item.qty.toLocaleString()}<span class="bubble-unit">箱</span></div>
+        ${formatDistHtml(distance)}
       </div>
     </div>`;
 }
@@ -306,13 +315,17 @@ function aggregateDotHtml(item: AggregateItem) {
     </div>`;
 }
 
-function siteLabelHtml(name: string, color: string, dx: number, dy: number) {
+function siteLabelHtml(name: string, color: string, dx: number, dy: number, distance?: number) {
   const lineLen = Math.sqrt(dx * dx + dy * dy).toFixed(1);
   const lineAngle = (Math.atan2(dy, dx) * 180 / Math.PI - 90).toFixed(1);
+  const distText = distance != null
+    ? (distance >= 1000 ? (distance / 1000).toFixed(1) + "km" : Math.round(distance) + "m")
+    : "";
+  const distSpan = distText ? ` <span style="color:rgba(168,201,255,0.65);font-size:10px;">${distText}</span>` : "";
   return `
     <div class="site-marker" style="--color:${color};--dx:${dx}px;--dy:${dy}px;--line-len:${lineLen}px;--line-angle:${lineAngle}deg;">
       <div class="site-callout"></div>
-      <span class="site-label">${name}</span>
+      <span class="site-label">${name}${distSpan}</span>
       <div class="site-dot"></div>
     </div>`;
 }
@@ -426,7 +439,8 @@ const renderAggregate = async () => {
       const off = offsets.get(item.parentName);
       const dx = off?.dx ?? 0;
       const dy = off?.dy ?? -40;
-      marker.setContent(aggregateBubbleHtml(item, dx, dy));
+      const dist = item.distance || undefined;
+      marker.setContent(aggregateBubbleHtml(item, dx, dy, dist));
     });
   };
 
@@ -515,7 +529,8 @@ const renderAllSites = async () => {
       const off = offsets.get(site.name);
       const dx = off?.dx ?? 0;
       const dy = off?.dy ?? -40;
-      marker.setContent(siteLabelHtml(site.name, color, dx, dy));
+      const dist = site.distance || undefined;
+      marker.setContent(siteLabelHtml(site.name, color, dx, dy, dist));
     });
   };
 
@@ -587,7 +602,8 @@ const renderDrilldown = async () => {
       const off = offsets.get(site.name);
       const dx = off?.dx ?? 0;
       const dy = off?.dy ?? -40;
-      marker.setContent(siteLabelHtml(site.name, color, dx, dy));
+      const dist = site.distance || undefined;
+      marker.setContent(siteLabelHtml(site.name, color, dx, dy, dist));
     });
   };
 
@@ -652,17 +668,12 @@ const renderBar3D = () => {
   if (sp) fitToSites(sites);
 };
 
-/* ---------- 视图切换（委托给 Store） ---------- */
+/* ---------- 视图切换 ---------- */
 const switchView = (mode: "aggregate" | "drilldown") => {
   repairStore.switchView(mode);
   if (mode === "aggregate") {
     map?.setZoomAndCenter(MAP_DEFAULT_ZOOM, MAP_DEFAULT_CENTER, true, 500);
   }
-};
-
-const backToAggregate = () => {
-  repairStore.clearDrilldown();
-  map?.setZoomAndCenter(MAP_DEFAULT_ZOOM, MAP_DEFAULT_CENTER, true, 500);
 };
 
 /* ---------- 地图缩放/拖拽后重算引线 ---------- */
@@ -850,6 +861,12 @@ onUnmounted(() => {
   font-weight: 400;
   opacity: 0.75;
   margin-left: 2px;
+}
+:global(.bubble-dist) {
+  font-size: 10px;
+  color: rgba(168, 201, 255, 0.7);
+  margin-top: 2px;
+  line-height: 1.2;
 }
 
 /* 引线 & 标签淡入动画 */

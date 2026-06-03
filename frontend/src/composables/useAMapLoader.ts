@@ -14,7 +14,7 @@ export async function useAMapLoader() {
     loadedPromise = AMapLoader.load({
       key: import.meta.env.VITE_AMAP_KEY || "",
       version: "2.0",
-      plugins: ["AMap.Scale", "AMap.ToolBar", "AMap.ControlBar", "AMap.HeatMap", "AMap.Geocoder"],
+      plugins: ["AMap.Scale", "AMap.ToolBar", "AMap.ControlBar", "AMap.HeatMap", "AMap.Geocoder", "AMap.Driving"],
     });
   }
   return loadedPromise;

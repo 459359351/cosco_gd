@@ -34,7 +34,7 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   position: relative;
   display: grid;
   grid-template-columns: clamp(320px, 21.875vw, 500px) 1fr clamp(320px, 21.875vw, 500px);
-  grid-template-rows: clamp(50px, 6.5vh, 72px) clamp(285px, 26.5vh, 380px) clamp(230px, 21.5vh, 340px) 1fr clamp(228px, 21.2vh, 340px);
+  grid-template-rows: clamp(50px, 6.5vh, 72px) 1fr 1fr clamp(140px, 15vh, 210px);
   gap: max(5px, 0.93vh) max(5px, 0.52vw);
   width: 100vw;
   height: 100vh;
@@ -94,12 +94,11 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   grid-row: 3;
 }
 .left-bottom {
-  grid-column: 1;
-  grid-row: 4;
+  display: none;
 }
 .center {
   grid-column: 2;
-  grid-row: 2 / 5;
+  grid-row: 2 / 4;
   position: relative;
   z-index: 2;
   overflow: hidden;
@@ -110,13 +109,14 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
 }
 .right-bottom {
   grid-column: 3;
-  grid-row: 3 / 5;
+  grid-row: 3;
 }
 .footer {
   grid-column: 1 / 4;
-  grid-row: 5;
+  grid-row: 4;
   min-height: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: max(5px, 0.52vw);
 }
 </style>
