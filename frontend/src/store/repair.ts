@@ -53,7 +53,7 @@ export interface CustomerDistItem {
 export type CompanyFilter = "all" | "self" | "outsourced";
 export type MapRenderMode = "point" | "heat" | "3d";
 export type MapViewMode = "aggregate" | "drilldown";
-export type RegionFilter = "all" | "guangdong" | "guangxi";
+export type RegionFilter = "all" | "guangdong" | "guangxi" | "yunnan" | "guizhou";
 
 export const useRepairStore = defineStore("repair", () => {
   const loading = ref(false);
