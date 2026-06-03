@@ -1,7 +1,7 @@
-# 集装箱修理业务驾驶舱 — 完整部署
+# 集装箱修理业务驾驶舱 — 服务器部署版
 # 启动：docker compose up -d
 # 配置：复制 .env.example 为 .env 并按需修改
-# 1Panel 管理：将此文件放在 /opt/1panel/docker/compose/cosco_gd/ 下
+# 部署：先 docker load -i cosco_gd_images.tar 加载镜像
 
 services:
   # ──────── 基础设施 ────────
@@ -37,9 +37,7 @@ services:
 
   # ──────── 后端 API ────────
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: cosco_gd-backend:latest
     container_name: cosco_gd_backend
     restart: unless-stopped
     environment:
@@ -56,13 +54,7 @@ services:
 
   # ──────── 前端 Nginx ────────
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
-        VITE_AMAP_SECURITY: ${VITE_AMAP_SECURITY:-}
-        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
+    image: cosco_gd-frontend:latest
     container_name: cosco_gd_frontend
     restart: unless-stopped
     ports:

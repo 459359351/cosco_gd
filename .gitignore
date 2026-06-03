@@ -32,3 +32,4 @@ Thumbs.db
 *.png
 !frontend/public/**/*.png
 cosco_gd_images.tar
+cosco_gd_data.sql
