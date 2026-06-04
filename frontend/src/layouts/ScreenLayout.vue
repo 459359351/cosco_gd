@@ -1,28 +1,49 @@
 <template>
   <div class="screen-wrapper">
     <header class="header panel">
-      <div class="title">集装箱修理业务驾驶舱</div>
+      <div class="header-left">
+        <WeekSelector />
+      </div>
+      <div class="title">
+        集装箱修理业务驾驶舱
+      </div>
       <div class="meta">
         <span>{{ now }}</span>
       </div>
     </header>
 
-    <aside class="left-top panel"><slot name="left-top" /></aside>
-    <aside class="left-mid panel"><slot name="left-mid" /></aside>
-    <aside class="left-bottom panel"><slot name="left-bottom" /></aside>
+    <aside class="left-top panel">
+      <slot name="left-top" />
+    </aside>
+    <aside class="left-mid panel">
+      <slot name="left-mid" />
+    </aside>
+    <aside class="left-bottom panel">
+      <slot name="left-bottom" />
+    </aside>
 
-    <main class="center panel"><slot name="center" /></main>
+    <main class="center panel">
+      <slot name="center" />
+    </main>
 
-    <aside class="right-top panel"><slot name="right-top" /></aside>
-    <aside class="right-bottom panel"><slot name="right-bottom" /></aside>
+    <aside class="right-top panel">
+      <slot name="right-top" />
+    </aside>
+    <aside class="right-bottom panel">
+      <slot name="right-bottom" />
+    </aside>
 
-    <footer class="footer panel"><slot name="footer" /></footer>
+    <footer class="footer panel">
+      <slot name="footer" />
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useNow } from "@vueuse/core";
 import { computed } from "vue";
+
+import WeekSelector from "@/components/header/WeekSelector.vue";
 
 const nowRef = useNow({ interval: 1000 });
 const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
@@ -69,6 +90,13 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   justify-content: center;
   padding: 0 clamp(10px, 1.04vw, 24px);
   position: relative;
+  overflow: visible;
+  z-index: 10;
+}
+.header-left {
+  position: absolute;
+  left: clamp(10px, 1.04vw, 24px);
+  z-index: 5001;
 }
 .title {
   font-size: clamp(20px, 2.8vw, 36px);

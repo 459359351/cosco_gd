@@ -67,3 +67,21 @@ export interface SheetInfo {
 export const batchUpdateSiteCoords = (
   items: Array<{ code: string; lng: number; lat: number; province?: string; city?: string }>,
 ) => api.post("/repair/network-sites/geocode", items).then((r) => r.data);
+
+export interface AvailableWeekItem {
+  year: number;
+  week: number;
+  week_label: string;
+  date_range: string;
+}
+
+export const getAvailableWeeks = (limit = 12) =>
+  api
+    .get("/repair/available-weeks", { params: { limit } })
+    .then(
+      (r) =>
+        r.data as {
+          weeks: AvailableWeekItem[];
+          latest: AvailableWeekItem | null;
+        },
+    );

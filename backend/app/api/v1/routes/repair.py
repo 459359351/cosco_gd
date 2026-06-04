@@ -1,5 +1,7 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Body, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -11,6 +13,8 @@ from app.models.repair import (
     RepairWeeklySummary,
 )
 from app.schemas.repair import (
+    AvailableWeekItem,
+    AvailableWeeksResponse,
     CumulativeItem,
     CustomerDistItem,
     NetworkSiteItem,
@@ -22,6 +26,63 @@ from app.schemas.repair import (
 )
 
 router = APIRouter(tags=["repair"])
+
+
+def _week_date_range(year: int, week: int) -> str:
+    """计算业务周的日期范围字符串 (上周四 ~ 本周三)。
+
+    ISO week 约定: 第 1 周是包含该年第一个周四的周。
+    业务周 N 的起始 = ISO 第 N 周的周四往前推 7 天 = 上周四。
+    业务周 N 的结束 = 起始 + 6 天 = 本周三。
+    """
+    from datetime import datetime
+
+    # 找到 ISO 第 N 周的周四
+    thu = datetime.fromisocalendar(year, week, 4)
+    start = thu - timedelta(days=7)  # 上周四
+    end = start + timedelta(days=6)  # 本周三
+    return f"{start.strftime('%m.%d')}-{end.strftime('%m.%d')}"
+
+
+@router.get("/available-weeks", response_model=AvailableWeeksResponse)
+async def get_available_weeks(
+    limit: int = Query(12, ge=1, le=52),
+    db: AsyncSession = Depends(get_db),
+):
+    """返回数据库中实际有数据的周列表，按降序排列。只返回最新年份的周。"""
+    # 先找到最新的年份
+    latest_year_row = (await db.execute(
+        select(func.max(RepairWeeklySummary.year))
+    )).scalar()
+    if not latest_year_row:
+        return AvailableWeeksResponse(weeks=[], latest=None)
+
+    stmt = (
+        select(
+            RepairWeeklySummary.year,
+            RepairWeeklySummary.week,
+        )
+        .distinct()
+        .where(RepairWeeklySummary.year == latest_year_row)
+        .order_by(RepairWeeklySummary.week.desc())
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    weeks = [
+        AvailableWeekItem(
+            year=r[0],
+            week=r[1],
+            week_label=f"{r[0]}年第{r[1]}周",
+            date_range=_week_date_range(r[0], r[1]),
+        )
+        for r in rows
+    ]
+
+    return AvailableWeeksResponse(
+        weeks=weeks,
+        latest=weeks[0] if weeks else None,
+    )
 
 
 @router.get("/network-sites")

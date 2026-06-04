@@ -3,23 +3,44 @@
     <template #left-top>
       <div class="slot-col">
         <PanelTitle title="核心经营指标" />
-        <div class="slot-body"><RepairKpiCards /></div>
+        <div class="slot-body">
+          <RepairKpiCards />
+        </div>
       </div>
     </template>
 
     <template #left-mid>
       <div class="slot-col">
         <PanelTitle title="客户类型占比" />
-        <div class="slot-body pie-slot"><CustomerPieChart /></div>
+        <div class="slot-body pie-slot">
+          <CustomerPieChart />
+        </div>
       </div>
     </template>
 
-    <template #left-bottom></template>
+    <template #left-bottom />
 
     <template #center>
-      <div v-if="showAdmin" class="toolbar">
-        <el-button class="console-link" type="primary" link @click="goAdmin">系统管理</el-button>
-        <el-button class="console-link" type="primary" link @click="goDataConsole">数据管理</el-button>
+      <div
+        v-if="showAdmin"
+        class="toolbar"
+      >
+        <el-button
+          class="console-link"
+          type="primary"
+          link
+          @click="goAdmin"
+        >
+          系统管理
+        </el-button>
+        <el-button
+          class="console-link"
+          type="primary"
+          link
+          @click="goDataConsole"
+        >
+          数据管理
+        </el-button>
       </div>
       <MapCore />
     </template>
@@ -27,14 +48,18 @@
     <template #right-top>
       <div class="slot-col">
         <PanelTitle title="自营/外包网点排名" />
-        <div class="slot-body"><RepairOrgRanking /></div>
+        <div class="slot-body">
+          <RepairOrgRanking />
+        </div>
       </div>
     </template>
 
     <template #right-bottom>
       <div class="slot-col">
         <PanelTitle title="网点明细" />
-        <div class="slot-body"><RepairSiteDrilldown /></div>
+        <div class="slot-body">
+          <RepairSiteDrilldown />
+        </div>
       </div>
     </template>
 
@@ -42,7 +67,9 @@
       <div class="footer-left">
         <div class="slot-col">
           <PanelTitle title="累计修理排名" />
-          <div class="slot-body"><CumulativeRankChart /></div>
+          <div class="slot-body">
+            <CumulativeRankChart />
+          </div>
         </div>
       </div>
       <div class="footer-right">
@@ -72,8 +99,10 @@ import CumulativeRankChart from "@/components/charts/CumulativeRankChart.vue";
 import RepairOrgTable from "@/components/tables/RepairOrgTable.vue";
 import ScreenLayout from "@/layouts/ScreenLayout.vue";
 import { useRepairStore } from "@/store/repair";
+import { useWeekStore } from "@/store/week";
 
 const repairStore = useRepairStore();
+const weekStore = useWeekStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -87,7 +116,15 @@ function goDataConsole() {
   void router.push("/data-console");
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 获取可用周列表，默认加载最新一周
+  await weekStore.fetchWeeks();
+  if (weekStore.latestWeek) {
+    repairStore.year = weekStore.latestWeek.year;
+    repairStore.week = weekStore.latestWeek.week;
+    weekStore.selectedYear = weekStore.latestWeek.year;
+    weekStore.selectedWeek = weekStore.latestWeek.week;
+  }
   repairStore.loadAll();
 });
 </script>

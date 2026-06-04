@@ -31,5 +31,14 @@ Thumbs.db
 # Screenshots
 *.png
 !frontend/public/**/*.png
+
+# Docker 导出产物（部署用，不进 Git）
 cosco_gd_images.tar
+cosco_gd-frontend.tar
+cosco_gd-images.tar
 cosco_gd_data.sql
+pgdata.tar.gz
+deploy/cosco_gd_pgdata.tar.gz
+
+# Docker 开发覆盖（本地开发用）
+docker-compose.override.yml

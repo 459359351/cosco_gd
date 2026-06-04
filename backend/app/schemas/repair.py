@@ -73,3 +73,15 @@ class NetworkSiteItem(BaseModel):
     lat: float = 0.0
     distance: float = 0.0
     status: str = ""
+
+
+class AvailableWeekItem(BaseModel):
+    year: int
+    week: int
+    week_label: str
+    date_range: str
+
+
+class AvailableWeeksResponse(BaseModel):
+    weeks: list[AvailableWeekItem]
+    latest: AvailableWeekItem | None = None
