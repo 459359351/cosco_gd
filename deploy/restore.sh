@@ -12,15 +12,15 @@ echo "=== 1. 加载 Docker 镜像 ==="
 docker load -i "$SCRIPT_DIR/cosco_gd_images.tar"
 echo "镜像加载完成"
 
-echo "=== 2. 启动服务 ==="
+echo "=== 2. 启动数据库 ==="
 cd "$PROJECT_DIR"
 
 # 确保没有开发覆盖文件
 rm -f docker-compose.override.yml
 
-docker compose up -d
+# 先只启动数据库
+docker compose up -d db
 
-echo "=== 3. 导入数据 ==="
 DB_CONTAINER="cosco_gd_db"
 
 # 等待数据库可连接
@@ -33,9 +33,13 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# 导入 SQL dump
+echo "=== 3. 导入数据 ==="
 docker exec -i "$DB_CONTAINER" psql -U postgres -d cosco_gd < "$SCRIPT_DIR/cosco_gd_dump.sql"
 echo "数据导入完成"
+
+echo "=== 4. 启动所有服务 ==="
+docker compose up -d
+echo "服务启动完成"
 
 echo ""
 echo "=== 部署完成 ==="

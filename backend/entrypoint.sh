@@ -16,8 +16,8 @@ asyncio.run(check())
 done
 echo "[entrypoint] 数据库已就绪"
 
-echo "[entrypoint] 运行数据库迁移..."
-alembic upgrade head
+echo "[entrypoint] 运行数据库迁移（如已有数据则跳过）..."
+alembic upgrade head 2>/dev/null || echo "[entrypoint] 迁移跳过（数据已通过dump导入）"
 
 echo "[entrypoint] 启动 FastAPI 服务..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000
