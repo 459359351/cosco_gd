@@ -7,7 +7,7 @@
       </div>
     </div>
     <div class="ranking-body" ref="scrollRef">
-      <div class="ranking-scroll" v-for="round in 2" :key="round">
+      <div class="ranking-scroll" v-for="round in copies" :key="round">
         <div
           v-for="(item, idx) in list"
           :key="round + '-' + item.org_name"
@@ -36,6 +36,7 @@ import { useRepairStore } from "@/store/repair";
 const store = useRepairStore();
 const metric = ref<"qty" | "revenue">("qty");
 const scrollRef = ref<HTMLElement | null>(null);
+const copies = ref(1);
 let scrollRaf: number | null = null;
 
 const list = computed(() => store.cumulative || []);
@@ -74,6 +75,15 @@ function startAutoScroll() {
   const body = scrollRef.value;
   if (!body) return;
   body.scrollTop = 0;
+  const firstCopy = body.firstElementChild as HTMLElement | null;
+  if (!firstCopy) return;
+  /* 一份数据能放下就不重复、不滚动 */
+  if (firstCopy.offsetHeight <= body.clientHeight) {
+    copies.value = 1;
+    return;
+  }
+  copies.value = 2;
+  const singleH = firstCopy.offsetHeight;
   const speed = 0.25;
   let acc = 0;
 
@@ -82,9 +92,8 @@ function startAutoScroll() {
     acc += speed;
     if (acc >= 1) {
       acc -= 1;
-      const halfH = body.scrollHeight / 2;
       body.scrollTop += 1;
-      if (body.scrollTop >= halfH) {
+      if (body.scrollTop >= singleH) {
         body.scrollTop = 0;
       }
     }

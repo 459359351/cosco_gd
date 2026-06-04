@@ -15,7 +15,7 @@
       <div class="org-table-body">
         <table class="org-table">
           <!-- 列表重复两遍实现无缝循环 -->
-          <tbody v-for="round in 2" :key="round">
+          <tbody v-for="round in copies" :key="round">
             <tr v-for="row in allOrgs" :key="round + '-' + row.org_code" @click="onRowClick(row)">
               <td class="col-name"><span class="name-text">{{ row.org_name }}</span></td>
               <td class="col-type">
@@ -45,6 +45,7 @@ import { useRepairStore } from "@/store/repair";
 
 const store = useRepairStore();
 const scrollRef = ref<HTMLElement | null>(null);
+const copies = ref(1);
 let scrollRaf: number | null = null;
 
 const allOrgs = computed(() => {
@@ -60,6 +61,15 @@ function startAutoScroll() {
   const body = scrollRef.value?.querySelector(".org-table-body") as HTMLElement | null;
   if (!body) return;
   body.scrollTop = 0;
+  const firstTbody = body.querySelector("table tbody") as HTMLElement | null;
+  if (!firstTbody) return;
+  /* 一份数据能放下就不重复、不滚动 */
+  if (firstTbody.offsetHeight <= body.clientHeight) {
+    copies.value = 1;
+    return;
+  }
+  copies.value = 2;
+  const singleH = firstTbody.offsetHeight;
   const speed = 0.25;
   let acc = 0;
 
@@ -68,9 +78,8 @@ function startAutoScroll() {
     acc += speed;
     if (acc >= 1) {
       acc -= 1;
-      const halfH = body.scrollHeight / 2;
       body.scrollTop += 1;
-      if (body.scrollTop >= halfH) {
+      if (body.scrollTop >= singleH) {
         body.scrollTop = 0;
       }
     }
