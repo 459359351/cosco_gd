@@ -34,7 +34,7 @@ const now = computed(() => nowRef.value.toLocaleString("zh-CN"));
   position: relative;
   display: grid;
   grid-template-columns: clamp(320px, 21.875vw, 500px) 1fr clamp(320px, 21.875vw, 500px);
-  grid-template-rows: clamp(50px, 6.5vh, 72px) 1fr 1fr clamp(140px, 15vh, 210px);
+  grid-template-rows: clamp(50px, 6.5vh, 72px) 1fr 1fr clamp(280px, 30vh, 420px);
   gap: max(5px, 0.93vh) max(5px, 0.52vw);
   width: 100vw;
   height: 100vh;
