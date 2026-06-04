@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # asyncpg.connect() 只接受 postgresql:// 格式，不接受 postgresql+asyncpg://

@@ -1,12 +1,12 @@
-# 集装箱修理业务驾驶舱 — 服务器部署版
+# 集装箱修理业务驾驶舱 — 服务器部署版（轻量化）
 # 启动：docker compose up -d
 # 配置：复制 .env.example 为 .env 并按需修改
 # 部署：先 docker load -i cosco_gd_images.tar 加载镜像
 
 services:
-  # ──────── 基础设施 ────────
+  # ──────── 数据库 ────────
   db:
-    image: postgis/postgis:16-3.4
+    image: postgres:16-alpine
     container_name: cosco_gd_db
     restart: unless-stopped
     environment:
@@ -23,18 +23,6 @@ services:
     networks:
       - cosco_gd_net
 
-  redis:
-    image: redis:7-alpine
-    container_name: cosco_gd_redis
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - cosco_gd_net
-
   # ──────── 后端 API ────────
   backend:
     image: cosco_gd-backend:latest
@@ -42,12 +30,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres}@db:5432/cosco_gd
-      REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: '["*"]'
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - cosco_gd_net

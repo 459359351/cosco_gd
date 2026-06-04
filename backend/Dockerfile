@@ -1,24 +1,34 @@
-# ─── 后端 Dockerfile ───
-# Python 3.11 + FastAPI + Alembic
+# ─── 后端 Dockerfile（轻量化多阶段构建）───
+# 最终镜像 ~120MB（vs 原来 665MB）
 
-FROM python:3.11-slim AS base
+# ---- 构建阶段 ----
+FROM python:3.11-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# 系统依赖（PostGIS 客户端库）
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq-dev gcc && \
-    rm -rf /var/lib/apt/lists/*
+# 系统构建依赖（仅构建阶段需要）
+RUN apk add --no-cache libpq-dev gcc musl-dev
 
-# 使用国内 PyPI 镜像加速
+# 国内 PyPI 镜像
 RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip config set global.trusted-host mirrors.aliyun.com
 
-# 先复制依赖清单，利用 Docker 层缓存
+# 安装依赖到独立目录
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --prefix=/install .
 
-# 复制应用代码（entrypoint.sh 已包含在内）
+# ---- 运行阶段 ----
+FROM python:3.11-alpine
+
+WORKDIR /app
+
+# 仅安装运行时依赖（libpq，不需要 gcc）
+RUN apk add --no-cache libpq
+
+# 从构建阶段复制 Python 包
+COPY --from=builder /install /usr/local
+
+# 复制应用代码
 COPY . .
 RUN chmod +x entrypoint.sh
 
