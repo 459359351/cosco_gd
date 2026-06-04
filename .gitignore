@@ -39,6 +39,7 @@ cosco_gd-images.tar
 cosco_gd_data.sql
 pgdata.tar.gz
 deploy/cosco_gd_pgdata.tar.gz
+deploy/cosco_gd_dump.sql
 
 # Docker 开发覆盖（本地开发用）
 docker-compose.override.yml
